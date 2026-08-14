@@ -1,6 +1,6 @@
 [Unit]
-Description=Elastic Security Display backend
-Documentation=https://github.com/jamesagarside/elastic-security-display
+Description=Elastic Pi Display backend
+Documentation=https://github.com/jamesagarside/elastic-pi-display
 After=network-online.target
 Wants=network-online.target
 
@@ -8,7 +8,7 @@ Wants=network-online.target
 Type=exec
 User=elastic-display
 Group=elastic-display
-ExecStart=/opt/elastic-security-display/venv/bin/elastic-display run
+ExecStart=/opt/elastic-pi-display/venv/bin/elastic-display run
 Restart=always
 RestartSec=5
 
@@ -17,7 +17,7 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
-ReadOnlyPaths=/etc/elastic-security-display
+ReadOnlyPaths=/etc/elastic-pi-display
 
 [Install]
 WantedBy=multi-user.target

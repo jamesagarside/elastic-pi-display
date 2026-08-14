@@ -1,4 +1,4 @@
-# elastic-security-display
+# elastic-pi-display
 
 A Raspberry Pi desk display for Elastic Security. It sits on your desk and
 shows, at a glance, how your security posture looks right now:
@@ -74,7 +74,7 @@ Administration is all over SSH:
 ```bash
 elastic-display setup   # (re)configure — deployment type, URLs, API key, space
 elastic-display test    # probe each data source, show what's available
-journalctl -u elastic-security-display -f
+journalctl -u elastic-pi-display -f
 ```
 
 ## Development
@@ -84,7 +84,7 @@ journalctl -u elastic-security-display -f
 python3 -m venv .venv && .venv/bin/pip install -e "backend[dev]"
 cd backend && ../.venv/bin/python -m pytest
 
-# run backend against your deployment (config in ~/.config/elastic-security-display/)
+# run backend against your deployment (config in ~/.config/elastic-pi-display/)
 .venv/bin/elastic-display setup
 .venv/bin/elastic-display run
 

@@ -31,8 +31,8 @@ If your alerts live in a non-default Kibana space, note the space ID too.
 
 ```bash
 ssh pi@<your-pi>
-curl -fsSLO https://github.com/jamesagarside/elastic-security-display/releases/latest/download/install.sh \
-  || curl -fsSL https://raw.githubusercontent.com/jamesagarside/elastic-security-display/main/deploy/install.sh -o install.sh
+curl -fsSLO https://github.com/jamesagarside/elastic-pi-display/releases/latest/download/install.sh \
+  || curl -fsSL https://raw.githubusercontent.com/jamesagarside/elastic-pi-display/main/deploy/install.sh -o install.sh
 sudo bash install.sh
 ```
 
@@ -40,13 +40,13 @@ If the Pi has no internet access to GitHub, build or download the release
 tarball elsewhere, `scp` it over, and run:
 
 ```bash
-sudo bash install.sh --from-file elastic-security-display-<version>.tar.gz
+sudo bash install.sh --from-file elastic-pi-display-<version>.tar.gz
 ```
 
 The installer:
 
 1. Creates a locked-down `elastic-display` system user.
-2. Installs the backend into a venv at `/opt/elastic-security-display`.
+2. Installs the backend into a venv at `/opt/elastic-pi-display`.
 3. Installs the prebuilt frontend (no Node.js needed on the Pi).
 4. Installs two systemd units — the backend service and the Chromium kiosk.
 5. Enables desktop autologin and disables screen blanking.
@@ -74,7 +74,7 @@ only required source.
 
 Re-test connectivity any time with `elastic-display test`, and re-run
 `elastic-display setup` to change settings, then
-`sudo systemctl restart elastic-security-display`.
+`sudo systemctl restart elastic-pi-display`.
 
 ## 4. Reboot
 
@@ -99,7 +99,7 @@ check, and Chromium opens the dashboard full screen.
 
 ```bash
 elastic-display test                                 # re-probe all data sources
-journalctl -u elastic-security-display -f            # backend logs
+journalctl -u elastic-pi-display -f            # backend logs
 systemctl --user status elastic-display-kiosk        # kiosk status (as the desktop user)
 curl -s localhost:8080/api/health | python3 -m json.tool
 ```
@@ -129,7 +129,7 @@ The layout adapts to the screen resolution automatically:
   graphical session; make sure desktop autologin is on
   (`sudo raspi-config nonint do_boot_behaviour B4`).
 - **"Display offline" pill** — the browser lost the backend:
-  `systemctl status elastic-security-display`.
+  `systemctl status elastic-pi-display`.
 - **"Elastic unreachable" pill** — the backend can't reach your deployment:
   `elastic-display test` and check network/API key.
 - **Attack Discovery tile missing** — the `_find` API needs a recent stack

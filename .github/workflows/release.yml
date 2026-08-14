@@ -43,7 +43,7 @@ jobs:
       - name: Assemble release tarball
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          PKG="elastic-security-display-${VERSION}"
+          PKG="elastic-pi-display-${VERSION}"
           mkdir -p "${PKG}/wheel"
           cp backend/dist/*.whl "${PKG}/wheel/"
           cp -r frontend/dist "${PKG}/static"
@@ -53,5 +53,5 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: elastic-security-display-*.tar.gz
+          files: elastic-pi-display-*.tar.gz
           generate_release_notes: true

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# Install or update elastic-security-display on a Raspberry Pi.
+# Install or update elastic-pi-display on a Raspberry Pi.
 #
 # Usage (as root on the Pi):
 #   sudo bash install.sh                     # fetch + install the latest release
 #   sudo bash install.sh --from-file X.tar.gz  # install an scp'd release tarball
 #
 # Re-running is safe: it updates /opt and the units but never touches an
-# existing /etc/elastic-security-display/config.toml.
+# existing /etc/elastic-pi-display/config.toml.
 set -euo pipefail
 
-REPO="jamesagarside/elastic-security-display"
-INSTALL_DIR="/opt/elastic-security-display"
-CONFIG_DIR="/etc/elastic-security-display"
+REPO="jamesagarside/elastic-pi-display"
+INSTALL_DIR="/opt/elastic-pi-display"
+CONFIG_DIR="/etc/elastic-pi-display"
 SERVICE_USER="elastic-display"
 # The desktop-session user that runs the Chromium kiosk.
 KIOSK_USER="${KIOSK_USER:-${SUDO_USER:-pi}}"
@@ -77,8 +77,8 @@ chown -R "${SERVICE_USER}:${SERVICE_USER}" "${INSTALL_DIR}"
 
 # --- 5. systemd units ---------------------------------------------------------
 log "Installing systemd units"
-install -m 0644 "${ARTIFACT_DIR}/deploy/systemd/elastic-security-display.service" \
-  /etc/systemd/system/elastic-security-display.service
+install -m 0644 "${ARTIFACT_DIR}/deploy/systemd/elastic-pi-display.service" \
+  /etc/systemd/system/elastic-pi-display.service
 
 KIOSK_HOME="$(getent passwd "${KIOSK_USER}" | cut -d: -f6)"
 [ -n "${KIOSK_HOME}" ] || die "kiosk user ${KIOSK_USER} does not exist (set KIOSK_USER=...)"
@@ -116,7 +116,7 @@ fi
 
 # --- 8. Start services --------------------------------------------------------
 log "Enabling services"
-systemctl enable --now elastic-security-display.service
+systemctl enable --now elastic-pi-display.service
 KIOSK_UID="$(id -u "${KIOSK_USER}")"
 sudo -u "${KIOSK_USER}" XDG_RUNTIME_DIR="/run/user/${KIOSK_UID}" \
   systemctl --user enable elastic-display-kiosk.service 2>/dev/null \
@@ -124,4 +124,4 @@ sudo -u "${KIOSK_USER}" XDG_RUNTIME_DIR="/run/user/${KIOSK_UID}" \
 
 log "Done. The display starts on the next boot of the desktop session."
 log "Admin commands: elastic-display setup | elastic-display test"
-log "Service logs:   journalctl -u elastic-security-display -f"
+log "Service logs:   journalctl -u elastic-pi-display -f"

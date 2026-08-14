@@ -1,11 +1,11 @@
 [Unit]
-Description=Elastic Security Display kiosk (Chromium)
+Description=Elastic Pi Display kiosk (Chromium)
 PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=exec
-ExecStart=/opt/elastic-security-display/kiosk.sh
+ExecStart=/opt/elastic-pi-display/kiosk.sh
 Restart=on-failure
 RestartSec=5
 

@@ -75,8 +75,8 @@ Notes:
 
 ```bash
 elastic-display setup        # re-enter the new key (other answers keep their defaults)
-sudo systemctl restart elastic-security-display
+sudo systemctl restart elastic-pi-display
 ```
 
-The key is stored only in `/etc/elastic-security-display/config.toml`, mode
+The key is stored only in `/etc/elastic-pi-display/config.toml`, mode
 `0600`, owned by the `elastic-display` service user.

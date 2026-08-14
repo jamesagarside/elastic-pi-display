@@ -2,8 +2,8 @@
 
 Resolution order for the config file path:
   1. ESD_CONFIG environment variable
-  2. /etc/elastic-security-display/config.toml   (service install)
-  3. ~/.config/elastic-security-display/config.toml  (development)
+  2. /etc/elastic-pi-display/config.toml   (service install)
+  3. ~/.config/elastic-pi-display/config.toml  (development)
 """
 
 from __future__ import annotations
@@ -14,8 +14,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
 
-SYSTEM_CONFIG_PATH = Path("/etc/elastic-security-display/config.toml")
-USER_CONFIG_PATH = Path.home() / ".config" / "elastic-security-display" / "config.toml"
+SYSTEM_CONFIG_PATH = Path("/etc/elastic-pi-display/config.toml")
+USER_CONFIG_PATH = Path.home() / ".config" / "elastic-pi-display" / "config.toml"
 
 DEPLOYMENT_TYPES = ("cloud", "self-managed", "serverless")
 

@@ -2,7 +2,7 @@
 
 The static dir (built frontend) is resolved from, in order:
   1. ESD_STATIC_DIR environment variable
-  2. /opt/elastic-security-display/static  (Pi install)
+  2. /opt/elastic-pi-display/static  (Pi install)
   3. ../../frontend/dist relative to the repo (development)
 """
 
@@ -27,7 +27,7 @@ from .state import DisplayState
 
 logger = logging.getLogger(__name__)
 
-OPT_STATIC_DIR = Path("/opt/elastic-security-display/static")
+OPT_STATIC_DIR = Path("/opt/elastic-pi-display/static")
 REPO_STATIC_DIR = Path(__file__).resolve().parents[3] / "frontend" / "dist"
 
 
@@ -74,7 +74,7 @@ def create_app(cfg: Config | None = None) -> FastAPI:
             await poller.stop()
             await client.aclose()
 
-    app = FastAPI(title="elastic-security-display", version=__version__, lifespan=lifespan)
+    app = FastAPI(title="elastic-pi-display", version=__version__, lifespan=lifespan)
     app.state.config = cfg
     app.state.display = DisplayState(
         meta={

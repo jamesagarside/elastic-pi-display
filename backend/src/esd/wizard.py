@@ -57,7 +57,7 @@ def derive_kibana_url(es_url: str) -> str:
 
 
 def run_setup() -> int:
-    print("\nelastic-security-display setup")
+    print("\nelastic-pi-display setup")
     print("=" * 40)
 
     print("\nDeployment type:")
@@ -119,7 +119,7 @@ def run_setup() -> int:
     path = write_config(cfg)
     print(f"\nConfig written to {path} (mode 0600).")
     print("Start or restart the service with:")
-    print("  sudo systemctl restart elastic-security-display")
+    print("  sudo systemctl restart elastic-pi-display")
     return 0
 
 

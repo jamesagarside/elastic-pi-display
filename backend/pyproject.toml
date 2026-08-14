@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "elastic-security-display"
+name = "elastic-pi-display"
 version = "0.1.0"
 description = "Raspberry Pi desk display for Elastic Security — alert severities and AI findings at a glance"
 requires-python = ">=3.11"
