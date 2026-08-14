@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import getpass
 import os
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -177,6 +178,9 @@ def default_config_path() -> Path:
     return USER_CONFIG_PATH
 
 
+SERVICE_USER = "elastic-display"
+
+
 def write_config(cfg: Config, path: Path | None = None) -> Path:
     path = path or default_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -190,6 +194,13 @@ def write_config(cfg: Config, path: Path | None = None) -> Path:
     except BaseException:
         Path(tmp).unlink(missing_ok=True)
         raise
+    # Written via sudo the file is root-owned, which the systemd service
+    # (User=elastic-display) cannot read — hand it over when possible.
+    if os.geteuid() == 0:
+        try:
+            shutil.chown(path, user=SERVICE_USER, group=SERVICE_USER)
+        except (LookupError, OSError):
+            pass  # dev machine without the service user
     return path
 
 
