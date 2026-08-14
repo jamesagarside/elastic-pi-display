@@ -8,13 +8,20 @@ set -euo pipefail
 URL="http://127.0.0.1:8080"
 
 # Wait for the backend to come up before launching the browser, so the first
-# thing on screen is the dashboard rather than a connection error.
+# thing on screen is the dashboard rather than a connection error. If it never
+# comes up (e.g. not configured yet), exit and let systemd retry us.
+HEALTHY=0
 for _ in $(seq 1 60); do
   if curl -fsS --max-time 2 "${URL}/api/health" >/dev/null 2>&1; then
+    HEALTHY=1
     break
   fi
   sleep 2
 done
+if [ "${HEALTHY}" -ne 1 ]; then
+  echo "backend not healthy at ${URL} — giving up for now" >&2
+  exit 1
+fi
 
 # Pi OS ships the browser as either `chromium-browser` or `chromium`.
 CHROMIUM="$(command -v chromium-browser || command -v chromium)"

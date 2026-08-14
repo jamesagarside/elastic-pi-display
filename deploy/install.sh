@@ -21,6 +21,16 @@ die() { echo "error: $*" >&2; exit 1; }
 
 [ "$(id -u)" -eq 0 ] || die "run as root: sudo bash install.sh"
 
+# Desktop images run the kiosk inside the user's graphical session; Lite images
+# get cage, a minimal Wayland compositor that runs Chromium as the only app.
+if command -v labwc >/dev/null 2>&1 || command -v wayfire >/dev/null 2>&1 \
+  || [ "$(systemctl get-default)" = "graphical.target" ]; then
+  KIOSK_MODE="desktop"
+else
+  KIOSK_MODE="cage"
+fi
+log "Kiosk mode: ${KIOSK_MODE}"
+
 # --- 1. Locate release artifacts ---------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR=""
@@ -53,6 +63,16 @@ resolve_artifacts() {
 }
 resolve_artifacts "$@"
 
+# --- 1b. Packages (Lite images ship without a browser or compositor) ----------
+if [ "${KIOSK_MODE}" = "cage" ]; then
+  if ! command -v cage >/dev/null 2>&1 || ! { command -v chromium >/dev/null 2>&1 || command -v chromium-browser >/dev/null 2>&1; }; then
+    log "Installing chromium and cage (this takes a while on a Pi 3)"
+    apt-get update -qq
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      chromium cage curl
+  fi
+fi
+
 # --- 2. System user and directories ------------------------------------------
 if ! id "${SERVICE_USER}" >/dev/null 2>&1; then
   log "Creating system user ${SERVICE_USER}"
@@ -80,22 +100,34 @@ log "Installing systemd units"
 install -m 0644 "${ARTIFACT_DIR}/deploy/systemd/elastic-pi-display.service" \
   /etc/systemd/system/elastic-pi-display.service
 
-KIOSK_HOME="$(getent passwd "${KIOSK_USER}" | cut -d: -f6)"
-[ -n "${KIOSK_HOME}" ] || die "kiosk user ${KIOSK_USER} does not exist (set KIOSK_USER=...)"
-KIOSK_UNIT_DIR="${KIOSK_HOME}/.config/systemd/user"
-mkdir -p "${KIOSK_UNIT_DIR}"
-install -m 0644 "${ARTIFACT_DIR}/deploy/systemd/elastic-display-kiosk.service" \
-  "${KIOSK_UNIT_DIR}/elastic-display-kiosk.service"
-chown -R "${KIOSK_USER}:" "${KIOSK_HOME}/.config"
-loginctl enable-linger "${KIOSK_USER}"
+if [ "${KIOSK_MODE}" = "desktop" ]; then
+  KIOSK_HOME="$(getent passwd "${KIOSK_USER}" | cut -d: -f6)"
+  [ -n "${KIOSK_HOME}" ] || die "kiosk user ${KIOSK_USER} does not exist (set KIOSK_USER=...)"
+  KIOSK_UNIT_DIR="${KIOSK_HOME}/.config/systemd/user"
+  mkdir -p "${KIOSK_UNIT_DIR}"
+  install -m 0644 "${ARTIFACT_DIR}/deploy/systemd/elastic-display-kiosk.service" \
+    "${KIOSK_UNIT_DIR}/elastic-display-kiosk.service"
+  chown -R "${KIOSK_USER}:" "${KIOSK_HOME}/.config"
+  loginctl enable-linger "${KIOSK_USER}"
+else
+  # Lite: cage takes over tty1 as a system service running as the kiosk user.
+  sed "s/^User=pi$/User=${KIOSK_USER}/" \
+    "${ARTIFACT_DIR}/deploy/systemd/elastic-pi-display-kiosk-cage.service" \
+    > /etc/systemd/system/elastic-pi-display-kiosk.service
+  chmod 0644 /etc/systemd/system/elastic-pi-display-kiosk.service
+  systemctl disable --now getty@tty1.service 2>/dev/null || true
+fi
 
 systemctl daemon-reload
 
 # --- 6. Raspberry Pi display settings ----------------------------------------
 if command -v raspi-config >/dev/null 2>&1; then
-  log "Configuring desktop autologin and disabling screen blanking"
-  raspi-config nonint do_boot_behaviour B4 || true
+  log "Disabling screen blanking"
   raspi-config nonint do_blanking 1 || true
+  if [ "${KIOSK_MODE}" = "desktop" ]; then
+    log "Enabling desktop autologin"
+    raspi-config nonint do_boot_behaviour B4 || true
+  fi
 fi
 for cmdline in /boot/firmware/cmdline.txt /boot/cmdline.txt; do
   if [ -f "${cmdline}" ] && ! grep -q "consoleblank=0" "${cmdline}"; then
@@ -106,8 +138,13 @@ done
 
 # --- 7. Configuration ---------------------------------------------------------
 if [ ! -f "${CONFIG_DIR}/config.toml" ]; then
-  log "No config yet — running the setup wizard"
-  ESD_CONFIG="${CONFIG_DIR}/config.toml" elastic-display setup
+  if [ -t 0 ]; then
+    log "No config yet — running the setup wizard"
+    ESD_CONFIG="${CONFIG_DIR}/config.toml" elastic-display setup
+  else
+    log "No config yet and no interactive terminal — run this when ready:"
+    log "  sudo elastic-display setup"
+  fi
 fi
 if [ -f "${CONFIG_DIR}/config.toml" ]; then
   chown "${SERVICE_USER}:${SERVICE_USER}" "${CONFIG_DIR}/config.toml"
@@ -117,10 +154,16 @@ fi
 # --- 8. Start services --------------------------------------------------------
 log "Enabling services"
 systemctl enable --now elastic-pi-display.service
-KIOSK_UID="$(id -u "${KIOSK_USER}")"
-sudo -u "${KIOSK_USER}" XDG_RUNTIME_DIR="/run/user/${KIOSK_UID}" \
-  systemctl --user enable elastic-display-kiosk.service 2>/dev/null \
-  || log "Kiosk unit installed; it will start with the next graphical login"
+if [ "${KIOSK_MODE}" = "desktop" ]; then
+  KIOSK_UID="$(id -u "${KIOSK_USER}")"
+  sudo -u "${KIOSK_USER}" XDG_RUNTIME_DIR="/run/user/${KIOSK_UID}" \
+    systemctl --user enable elastic-display-kiosk.service 2>/dev/null \
+    || log "Kiosk unit installed; it will start with the next graphical login"
+else
+  systemctl enable elastic-pi-display-kiosk.service
+  # Only take over tty1 immediately if the display is already configured.
+  [ -f "${CONFIG_DIR}/config.toml" ] && systemctl restart elastic-pi-display-kiosk.service
+fi
 
 log "Done. The display starts on the next boot of the desktop session."
 log "Admin commands: elastic-display setup | elastic-display test"

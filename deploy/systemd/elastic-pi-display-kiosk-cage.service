@@ -1,0 +1,28 @@
+# Kiosk unit for Raspberry Pi OS Lite (no desktop): cage runs Chromium as the
+# only fullscreen app on tty1. Installed by install.sh instead of the
+# graphical-session user unit when no desktop environment is present.
+[Unit]
+Description=Elastic Pi Display kiosk (cage + Chromium)
+After=systemd-user-sessions.service elastic-pi-display.service
+Conflicts=getty@tty1.service
+
+[Service]
+Type=simple
+User=pi
+ExecStart=/usr/bin/cage -- /opt/elastic-pi-display/kiosk.sh
+Restart=on-failure
+RestartSec=5
+# Give cage a real logind session on tty1 so it can take the seat.
+PAMName=login
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+
+[Install]
+WantedBy=multi-user.target
