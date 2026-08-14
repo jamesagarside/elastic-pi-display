@@ -1,0 +1,13 @@
+[Unit]
+Description=Elastic Security Display kiosk (Chromium)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=exec
+ExecStart=/opt/elastic-security-display/kiosk.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
