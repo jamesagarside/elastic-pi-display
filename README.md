@@ -116,6 +116,13 @@ POST /_security/api_key
 }
 ```
 
+> **Using the API keys UI instead?** The form posts to a different (Kibana)
+> endpoint with its own shape, so the full request above will be rejected with
+> a `role_descriptors.indices: expected a plain object` validation error. In
+> **Stack Management → API keys → Control security privileges**, paste only
+> the inner object — everything from `"elastic_pi_display_read": { … }` —
+> and set the name in the form field.
+
 The Security feature IDs have changed across stack versions (`feature_siem` →
 `feature_siemV2` → `feature_siemV3`). If `elastic-display test` reports Attack
 Discovery as unavailable with a 403, list your version's IDs with
