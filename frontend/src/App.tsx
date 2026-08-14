@@ -136,19 +136,24 @@ function Regions({
     return <Region grow>{currentView === 'severity' ? severity : secondary}</Region>;
   }
   if (tier === 'medium') {
+    // currentView falls back to 'severity' when no secondary source is
+    // available — severity then takes the full width instead of an empty
+    // region masquerading as "no attack discoveries".
     return (
       <>
         <Region grow>{severity}</Region>
-        <Region grow>{secondary}</Region>
+        {currentView !== 'severity' && <Region grow>{secondary}</Region>}
       </>
     );
   }
   return (
     <>
       <Region grow>{severity}</Region>
-      <Region grow>
-        <AttackDiscoveryView attackDiscovery={attackDiscovery} maxCards={3} />
-      </Region>
+      {attackDiscovery.status !== 'unavailable' && (
+        <Region grow>
+          <AttackDiscoveryView attackDiscovery={attackDiscovery} maxCards={3} />
+        </Region>
+      )}
       {riskScores.status !== 'unavailable' && (
         <Region grow>
           <RiskView riskScores={riskScores} />

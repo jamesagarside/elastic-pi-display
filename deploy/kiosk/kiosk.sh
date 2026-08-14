@@ -23,6 +23,26 @@ if [ "${HEALTHY}" -ne 1 ]; then
   exit 1
 fi
 
+# Optional overrides, e.g. panels whose EDID prefers a mode the physical
+# resolution can't match: set KIOSK_OUTPUT and KIOSK_MODE here. Lives in
+# /opt (not /etc/elastic-pi-display) because the kiosk user has no access to
+# the config dir, which holds the API key.
+#   echo 'KIOSK_OUTPUT=HDMI-A-1'  >  /opt/elastic-pi-display/kiosk.env
+#   echo 'KIOSK_MODE=800x480'     >> /opt/elastic-pi-display/kiosk.env
+if [ -f /opt/elastic-pi-display/kiosk.env ]; then
+  # shellcheck disable=SC1091
+  . /opt/elastic-pi-display/kiosk.env
+fi
+
+# One-shot mode sets get reverted whenever the compositor reconfigures, so a
+# kanshi daemon continuously enforces the requested mode instead. It lives in
+# this unit's cgroup and dies with it.
+if [ -n "${KIOSK_MODE:-}" ] && command -v kanshi >/dev/null 2>&1; then
+  KANSHI_CONF="$(mktemp)"
+  printf 'profile {\n  output "%s" mode %s\n}\n' \
+    "${KIOSK_OUTPUT:-HDMI-A-1}" "${KIOSK_MODE}" > "${KANSHI_CONF}"
+  kanshi -c "${KANSHI_CONF}" &
+fi
 # Pi OS ships the browser as either `chromium-browser` or `chromium`.
 CHROMIUM="$(command -v chromium-browser || command -v chromium)"
 

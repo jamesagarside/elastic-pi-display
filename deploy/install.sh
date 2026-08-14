@@ -69,7 +69,7 @@ if [ "${KIOSK_MODE}" = "cage" ]; then
     log "Installing chromium and cage (this takes a while on a Pi 3)"
     apt-get update -qq
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-      chromium cage curl
+      chromium cage kanshi curl
   fi
 fi
 
