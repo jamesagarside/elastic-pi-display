@@ -27,6 +27,21 @@ The display talks to two endpoints, both with the same API key:
 
 If your alerts live in a non-default Kibana space, note the space ID too.
 
+## 1b. Know your screen
+
+How the display is driven depends on the panel type — check before installing:
+
+| Panel type | How to tell | What to do |
+| --- | --- | --- |
+| HDMI or official DSI touch display | HDMI cable/bridge, or ribbon into the DISPLAY port | Nothing — works out of the box. If the panel stays off, force the output with `video=HDMI-A-1:<W>x<H>M@60D` in `/boot/firmware/cmdline.txt`; if its EDID advertises a wrong preferred mode, set `KIOSK_MODE=<W>x<H>` in `/opt/elastic-pi-display/kiosk.env` (enforced via kanshi) |
+| DPI (parallel RGB over all GPIO pins) | Sits on the whole GPIO header, no HDMI in play | Add your vendor's DPI overlay to `/boot/firmware/config.txt` |
+| SPI TFT (e.g. 3.5" ILI9486 resistive kits) | Sits on the GPIO header; screen glows solid white until a driver loads | Add the panel overlay (e.g. `dtoverlay=piscreen,speed=18000000,rotate=270` — try `rotate=90` if upside down) and run the installer with `--spi-panel` |
+
+The `--spi-panel` flag installs a minimal X11/fbdev kiosk instead of the
+Wayland one, because SPI panels expose only a legacy framebuffer that Wayland
+compositors cannot draw to. The panel's framebuffer number is resolved
+automatically at every start.
+
 ## 2. Install on the Pi
 
 ```bash

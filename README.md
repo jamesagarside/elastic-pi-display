@@ -48,7 +48,7 @@ supported — authentication is a single API key
 
 ## Works on any Raspberry Pi and screen
 
-Tested baseline is a Pi 3B with a 5-inch 800×480 touchscreen. The layout
+Tested baselines are a Pi 3B with a 3.5-inch 480×320 SPI touchscreen and larger HDMI/DSI panels. The layout
 adapts: small screens show one view at a time (tap to cycle), bigger screens
 show more side by side. Touch is optional — without it the display just shows
 the severity view.
@@ -63,6 +63,7 @@ On the Pi (Raspberry Pi OS with desktop), over SSH:
 ```bash
 sudo bash install.sh                       # fetches the latest release
 sudo bash install.sh --from-file <tarball> # air-gapped install
+sudo bash install.sh --spi-panel           # GPIO SPI TFT screens (see docs/setup.md)
 ```
 
 The installer sets up the service user, systemd units, kiosk autostart, and

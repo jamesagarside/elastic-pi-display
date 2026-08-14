@@ -4,10 +4,21 @@
 # Usage (as root on the Pi):
 #   sudo bash install.sh                     # fetch + install the latest release
 #   sudo bash install.sh --from-file X.tar.gz  # install an scp'd release tarball
+#   sudo bash install.sh --spi-panel         # SPI TFT screen (fbtft): X11 kiosk
 #
 # Re-running is safe: it updates /opt and the units but never touches an
 # existing /etc/elastic-pi-display/config.toml.
 set -euo pipefail
+
+FROM_FILE=""
+SPI_PANEL=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --from-file) FROM_FILE="${2:-}"; shift 2 ;;
+    --spi-panel) SPI_PANEL=1; shift ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+done
 
 REPO="jamesagarside/elastic-pi-display"
 INSTALL_DIR="/opt/elastic-pi-display"
@@ -23,7 +34,10 @@ die() { echo "error: $*" >&2; exit 1; }
 
 # Desktop images run the kiosk inside the user's graphical session; Lite images
 # get cage, a minimal Wayland compositor that runs Chromium as the only app.
-if command -v labwc >/dev/null 2>&1 || command -v wayfire >/dev/null 2>&1 \
+# SPI TFT panels (fbtft, no KMS device) need X11 with the fbdev driver instead.
+if [ "${SPI_PANEL}" = 1 ]; then
+  KIOSK_MODE="x11"
+elif command -v labwc >/dev/null 2>&1 || command -v wayfire >/dev/null 2>&1 \
   || [ "$(systemctl get-default)" = "graphical.target" ]; then
   KIOSK_MODE="desktop"
 else
@@ -38,10 +52,10 @@ cleanup() { [ -n "${WORK_DIR}" ] && rm -rf "${WORK_DIR}"; }
 trap cleanup EXIT
 
 resolve_artifacts() {
-  if [ "${1:-}" = "--from-file" ]; then
-    [ -f "${2:-}" ] || die "--from-file: tarball not found: ${2:-}"
+  if [ -n "${FROM_FILE}" ]; then
+    [ -f "${FROM_FILE}" ] || die "--from-file: tarball not found: ${FROM_FILE}"
     WORK_DIR="$(mktemp -d)"
-    tar -xzf "$2" -C "${WORK_DIR}" --strip-components=1
+    tar -xzf "${FROM_FILE}" -C "${WORK_DIR}" --strip-components=1
     ARTIFACT_DIR="${WORK_DIR}"
   elif [ -d "${SCRIPT_DIR}/../wheel" ] && [ -d "${SCRIPT_DIR}/../static" ]; then
     # Running from inside an extracted release tarball.
@@ -61,7 +75,7 @@ resolve_artifacts() {
   [ -d "${ARTIFACT_DIR}/wheel" ] || die "release is missing wheel/"
   [ -d "${ARTIFACT_DIR}/static" ] || die "release is missing static/"
 }
-resolve_artifacts "$@"
+resolve_artifacts
 
 # --- 1b. Packages (Lite images ship without a browser or compositor) ----------
 if [ "${KIOSK_MODE}" = "cage" ]; then
@@ -70,6 +84,14 @@ if [ "${KIOSK_MODE}" = "cage" ]; then
     apt-get update -qq
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
       chromium cage kanshi curl
+  fi
+elif [ "${KIOSK_MODE}" = "x11" ]; then
+  if ! command -v xinit >/dev/null 2>&1 || ! { command -v chromium >/dev/null 2>&1 || command -v chromium-browser >/dev/null 2>&1; }; then
+    log "Installing chromium and a minimal X11 stack (this takes a while on a Pi 3)"
+    apt-get update -qq
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      chromium xserver-xorg-core xserver-xorg-legacy xserver-xorg-video-fbdev \
+      xserver-xorg-input-libinput xinit curl
   fi
 fi
 
@@ -109,13 +131,28 @@ if [ "${KIOSK_MODE}" = "desktop" ]; then
     "${KIOSK_UNIT_DIR}/elastic-display-kiosk.service"
   chown -R "${KIOSK_USER}:" "${KIOSK_HOME}/.config"
   loginctl enable-linger "${KIOSK_USER}"
-else
+elif [ "${KIOSK_MODE}" = "cage" ]; then
   # Lite: cage takes over tty1 as a system service running as the kiosk user.
   sed "s/^User=pi$/User=${KIOSK_USER}/" \
     "${ARTIFACT_DIR}/deploy/systemd/elastic-pi-display-kiosk-cage.service" \
     > /etc/systemd/system/elastic-pi-display-kiosk.service
   chmod 0644 /etc/systemd/system/elastic-pi-display-kiosk.service
   systemctl disable --now getty@tty1.service 2>/dev/null || true
+else
+  # SPI panel: X11 on the fbtft framebuffer.
+  sed "s/^User=pi$/User=${KIOSK_USER}/" \
+    "${ARTIFACT_DIR}/deploy/systemd/elastic-pi-display-kiosk-x11.service" \
+    > /etc/systemd/system/elastic-pi-display-kiosk.service
+  chmod 0644 /etc/systemd/system/elastic-pi-display-kiosk.service
+  # Resolves the panel's fb number at each start — numbering isn't boot-stable.
+  install -m 0755 "${ARTIFACT_DIR}/deploy/x11/set-fbdev.sh" "${INSTALL_DIR}/set-fbdev.sh"
+  # The X wrapper must allow a systemd-started (non-console-login) session.
+  printf "allowed_users=anybody\nneeds_root_rights=yes\n" > /etc/X11/Xwrapper.config
+  systemctl disable --now getty@tty1.service 2>/dev/null || true
+  if ! grep -qE "^dtoverlay=(piscreen|waveshare|tinylcd|pitft)" /boot/firmware/config.txt; then
+    log "NOTE: no SPI panel overlay found in /boot/firmware/config.txt."
+    log "  Add the one for your panel, e.g.: dtoverlay=piscreen,speed=18000000,rotate=270"
+  fi
 fi
 
 systemctl daemon-reload
