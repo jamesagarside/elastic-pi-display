@@ -49,7 +49,11 @@ POST /_security/api_key
       "applications": [
         {
           "application": "kibana-.kibana",
-          "privileges": ["feature_siemV3.read", "feature_securitySolutionAssistant.read"],
+          "privileges": [
+            "feature_siemV3.read",
+            "feature_securitySolutionAttackDiscovery.read",
+            "feature_securitySolutionAssistant.read"
+          ],
           "resources": ["space:default"]
         }
       ]

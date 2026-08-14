@@ -17,7 +17,7 @@ one shows the state of your SIEM instead.
 ![Severity view on a 5-inch screen, dark mode](docs/screenshots/small-dark-severity.png)
 
 | 5" screen, light mode, Attack Discovery view | Large screen, everything at once |
-|---|---|
+| --- | --- |
 | ![](docs/screenshots/small-light-attack.png) | ![](docs/screenshots/large-dark-all.png) |
 
 ## How it works
@@ -77,6 +77,52 @@ elastic-display test    # probe each data source, show what's available
 journalctl -u elastic-pi-display -f
 ```
 
+## Creating the API key
+
+An index-only read key covers the severity and risk tiles, but **Attack
+Discovery is a Kibana API**, so the key also needs Kibana feature privileges.
+Run this in **Kibana → Dev Tools** (change `default` in both places if your
+alerts live in another space), then paste the `encoded` value into
+`elastic-display setup`:
+
+```json
+POST /_security/api_key
+{
+  "name": "elastic-pi-display",
+  "role_descriptors": {
+    "elastic_pi_display_read": {
+      "indices": [
+        {
+          "names": [
+            ".alerts-security.alerts-default",
+            "risk-score.risk-score-latest-default"
+          ],
+          "privileges": ["read", "view_index_metadata"]
+        }
+      ],
+      "applications": [
+        {
+          "application": "kibana-.kibana",
+          "privileges": [
+            "feature_siemV3.read",
+            "feature_securitySolutionAttackDiscovery.read",
+            "feature_securitySolutionAssistant.read"
+          ],
+          "resources": ["space:default"]
+        }
+      ]
+    }
+  }
+}
+```
+
+The Security feature IDs have changed across stack versions (`feature_siem` →
+`feature_siemV2` → `feature_siemV3`). If `elastic-display test` reports Attack
+Discovery as unavailable with a 403, list your version's IDs with
+`GET kbn:/api/security/privileges` in Dev Tools and adjust — details and a
+simpler UI-based alternative in
+[docs/api-key-privileges.md](docs/api-key-privileges.md).
+
 ## Development
 
 ```bash
@@ -98,7 +144,7 @@ backend wheel + deploy scripts in one tarball, so the Pi never needs Node.js.
 ## Repository layout
 
 | Path | What |
-|---|---|
+| --- | --- |
 | `backend/` | FastAPI service, Elastic data sources, setup wizard CLI |
 | `frontend/` | Vite + React + EUI (Borealis) kiosk app |
 | `deploy/` | `install.sh`, systemd units, Chromium kiosk launcher |
