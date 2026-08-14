@@ -1,6 +1,6 @@
 # Kiosk unit for SPI TFT panels (fbtft framebuffer, no DRM/KMS device): a
 # minimal X server with the fbdev driver runs Chromium. Installed by
-# install.sh --spi-panel in place of the cage unit — wlroots compositors
+# install.sh --spi-panel in place of the cage unit: wlroots compositors
 # cannot output to fbtft framebuffers.
 [Unit]
 Description=Elastic Pi Display kiosk (X11 fbdev + Chromium)

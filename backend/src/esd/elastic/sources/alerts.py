@@ -1,7 +1,7 @@
 """Open security alert counts per severity.
 
 Queries the `.alerts-security.alerts-<space>` alias directly via the
-Elasticsearch search API — this works identically on Cloud hosted,
+Elasticsearch search API: this works identically on Cloud hosted,
 self-managed, and serverless deployments with an API key that has `read`
 on the alias.
 """

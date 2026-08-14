@@ -1,49 +1,36 @@
 # API key privileges
 
-The display is read-only: it needs to search two index patterns and call one
-Kibana API. Give it the least privilege that covers those.
+The display is read-only. It searches two index patterns and calls one Kibana
+API, so give it the least privilege that covers those.
 
 ## What the key is used for
 
 | Data source | Call | Needs |
-|---|---|---|
+| --- | --- | --- |
 | Alert severity counts | `POST <es>/.alerts-security.alerts-<space>/_search` | index `read` |
 | Entity risk scores | `POST <es>/risk-score.risk-score-latest-<space>/_search` | index `read` (tile hides if the risk engine is off) |
 | Attack Discovery | `GET <kibana>/api/attack_discovery/_find` | Kibana Security read |
 
-## Simple path (recommended)
+## Recommended: restricted key via Dev Tools
 
-Create the key while logged in to Kibana as a user with a **read-only security
-analyst** role — an API key snapshots the creating user's permissions:
-
-1. In Kibana: **Stack Management → API keys → Create API key** (on serverless:
-   **Project settings → Management → API keys**).
-2. Name it (e.g. `security-display`), no expiry or role restriction.
-3. Copy the **Base64/encoded** value — that goes into `elastic-display setup`.
-
-If you create it as a full admin instead, it works but the key can do
-everything the admin can. Fine for a home lab; not for a SOC wall.
-
-## Hardened path: restricted role descriptors
-
-Create the key with explicit `role_descriptors` so it can only read what the
-display needs. Run in **Dev Tools** (adjust `default` if you use another
-space):
+Create the key with explicit role descriptors so it can only read what the
+display needs. Run this in Kibana Dev Tools (change `default` in both places
+if you use another space), then copy the `encoded` value from the response
+into `elastic-display setup`:
 
 ```json
 POST /_security/api_key
 {
-  "name": "security-display",
+  "name": "elastic-pi-display",
   "role_descriptors": {
-    "security_display_read": {
+    "elastic_pi_display_read": {
       "indices": [
         {
           "names": [
             ".alerts-security.alerts-default",
             "risk-score.risk-score-latest-default"
           ],
-          "privileges": ["read", "view_index_metadata"],
-          "allow_restricted_indices": false
+          "privileges": ["read", "view_index_metadata"]
         }
       ],
       "applications": [
@@ -62,25 +49,46 @@ POST /_security/api_key
 }
 ```
 
-Notes:
+An index-only key also works, but the Attack Discovery tile will hide itself
+because that API needs the Kibana feature privileges in the `applications`
+block.
 
-- The alerts alias is not a restricted index, so plain index privileges are
-  enough for the severity counts.
-- The `applications` block grants Kibana feature privileges to the key; the
-  feature ID for the Security solution has changed across stack versions
-  (`feature_siem` → `feature_siemV2` → `feature_siemV3`). If Attack Discovery
-  shows as unavailable with a 403 in `elastic-display test`, check your
-  version's feature ID with `GET <kibana>/api/security/privileges` and adjust —
-  or fall back to the simple path above.
-- On serverless projects, prefer creating the key in the project's API keys UI;
-  unified Cloud API keys also work.
+### Using the API keys UI instead
+
+The Stack Management form posts to a different (Kibana) endpoint with its own
+request shape, so pasting the full request above is rejected with a
+`role_descriptors.indices: expected a plain object` validation error. In
+**Stack Management > API keys > Control security privileges**, paste only the
+inner object, everything from `"elastic_pi_display_read": { ... }`, and set
+the name in the form field.
+
+### Feature privilege IDs change between versions
+
+The Security feature IDs have changed across stack versions (`feature_siem`,
+then `feature_siemV2`, then `feature_siemV3`). If `elastic-display test`
+reports Attack Discovery as unavailable with a 403, list your version's IDs
+with `GET kbn:/api/security/privileges` in Dev Tools and adjust the
+`applications` block to match.
+
+## Simple alternative
+
+Create the key while logged in to Kibana as a user with a read-only security
+analyst role; an API key snapshots the creating user's permissions:
+
+1. In Kibana: **Stack Management > API keys > Create API key** (on
+   serverless: **Project settings > Management > API keys**).
+2. Name it (for example `elastic-pi-display`), no expiry or restriction.
+3. Copy the encoded value; that goes into `elastic-display setup`.
+
+Creating the key as a full admin also works, but the key can then do
+everything the admin can. Fine for a home lab, not for a SOC wall.
 
 ## Rotating the key
 
 ```bash
-elastic-display setup        # re-enter the new key (other answers keep their defaults)
+sudo elastic-display setup      # re-enter the new key
 sudo systemctl restart elastic-pi-display
 ```
 
-The key is stored only in `/etc/elastic-pi-display/config.toml`, mode
-`0600`, owned by the `elastic-display` service user.
+The key is stored only in `/etc/elastic-pi-display/config.toml`, mode `0600`,
+owned by the `elastic-display` service user.

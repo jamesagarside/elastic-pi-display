@@ -1,7 +1,7 @@
 """Attack Discovery findings via the public Kibana `_find` API.
 
 `GET /api/attack_discovery/_find` is documented for both stack Kibana and
-serverless security projects, but it is a recent API — older 8.x stacks only
+serverless security projects, but it is a recent API: older 8.x stacks only
 have internal endpoints, which we never call. The startup probe handles this:
 a 404/403 marks the source unavailable and the display hides the tile.
 """
@@ -47,7 +47,7 @@ class AttackDiscoverySource(Source):
     def _normalise(d: dict[str, Any]) -> dict[str, Any]:
         summary = d.get("summary_markdown") or ""
         if len(summary) > SUMMARY_TRUNCATE:
-            summary = summary[: SUMMARY_TRUNCATE - 1] + "…"
+            summary = summary[: SUMMARY_TRUNCATE - 3] + "..."
         return {
             "id": d.get("id"),
             "title": d.get("title") or "Untitled discovery",

@@ -91,7 +91,7 @@ def create_app(cfg: Config | None = None) -> FastAPI:
     if static:
         app.mount("/", StaticFiles(directory=static, html=True), name="static")
     else:
-        logger.warning("no frontend static dir found — serving API only")
+        logger.warning("no frontend static dir found: serving API only")
     return app
 
 

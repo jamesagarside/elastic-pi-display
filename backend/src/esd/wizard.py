@@ -107,12 +107,12 @@ def run_setup() -> int:
         server=ServerConfig(),
     )
 
-    print("\nTesting connection…")
+    print("\nTesting connection...")
     results = asyncio.run(probe_sources(cfg))
     print_capability_table(results)
 
     if not results.get("alerts", (False, ""))[0]:
-        answer = _prompt("\nAlerts are unavailable — save this config anyway? (y/n)", "n")
+        answer = _prompt("\nAlerts are unavailable: save this config anyway? (y/n)", "n")
         if answer.lower() != "y":
             print("Aborted; nothing written.")
             return 1
@@ -128,7 +128,7 @@ def run_test() -> int:
     from .config import load_config
 
     cfg = load_config()
-    print("Testing connection…")
+    print("Testing connection...")
     results = asyncio.run(probe_sources(cfg))
     print_capability_table(results)
     return 0 if results.get("alerts", (False, ""))[0] else 1
@@ -160,12 +160,12 @@ def print_capability_table(results: dict[str, tuple[bool, str]]) -> None:
     for name, (ok, detail) in results.items():
         label = SOURCE_LABELS.get(name, name)
         if ok:
-            print(f"  ✔ {label:<20} OK")
+            print(f"  OK {label:<20} available")
         else:
-            reason = detail.splitlines()[0][:80] if detail else "unavailable"
-            print(f"  ✘ {label:<20} unavailable — {reason}")
+            reason = detail.splitlines()[0][:80] if detail else "no detail"
+            print(f"   X {label:<20} unavailable ({reason})")
             if name != "alerts":
-                print(f"    (the {label} tile will be hidden on the display)")
+                print(f"     (the {label} tile will be hidden on the display)")
 
 
 def default_config_path() -> Path:
@@ -195,7 +195,7 @@ def write_config(cfg: Config, path: Path | None = None) -> Path:
         Path(tmp).unlink(missing_ok=True)
         raise
     # Written via sudo the file is root-owned, which the systemd service
-    # (User=elastic-display) cannot read — hand it over when possible.
+    # (User=elastic-display) cannot read: hand it over when possible.
     if os.geteuid() == 0:
         try:
             shutil.chown(path, user=SERVICE_USER, group=SERVICE_USER)

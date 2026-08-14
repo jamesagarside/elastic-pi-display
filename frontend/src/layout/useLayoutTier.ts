@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 
 /**
- * small  — 5" panels (800×480): one view at a time, tap to cycle
- * medium — ~10" screens: severity + attack discovery side by side
- * large  — monitors/TVs: all regions at once
+ * small : 5" panels (800×480): one view at a time, tap to cycle
+ * medium: ~10" screens: severity + attack discovery side by side
+ * large : monitors/TVs: all regions at once
  */
 export type LayoutTier = 'small' | 'medium' | 'large';
 

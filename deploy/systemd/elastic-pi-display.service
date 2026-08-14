@@ -12,7 +12,7 @@ ExecStart=/opt/elastic-pi-display/venv/bin/elastic-display run
 Restart=always
 RestartSec=5
 
-# Hardening — the service only needs to read its config and serve HTTP.
+# Hardening: the service only needs to read its config and serve HTTP.
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true

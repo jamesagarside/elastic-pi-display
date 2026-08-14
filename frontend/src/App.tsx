@@ -137,7 +137,7 @@ function Regions({
   }
   if (tier === 'medium') {
     // currentView falls back to 'severity' when no secondary source is
-    // available — severity then takes the full width instead of an empty
+    // available: severity then takes the full width instead of an empty
     // region masquerading as "no attack discoveries".
     return (
       <>

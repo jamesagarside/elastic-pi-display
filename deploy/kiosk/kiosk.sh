@@ -19,7 +19,7 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 if [ "${HEALTHY}" -ne 1 ]; then
-  echo "backend not healthy at ${URL} — giving up for now" >&2
+  echo "backend not healthy at ${URL}: giving up for now" >&2
   exit 1
 fi
 

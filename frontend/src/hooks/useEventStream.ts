@@ -37,7 +37,7 @@ export function useEventStream(): EventStream {
       try {
         setSnapshot(JSON.parse((event as MessageEvent).data));
       } catch {
-        // malformed frame — keep last good snapshot
+        // malformed frame: keep last good snapshot
       }
     });
 

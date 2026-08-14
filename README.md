@@ -1,135 +1,110 @@
 # elastic-pi-display
 
-A Raspberry Pi desk display for Elastic Security. It sits on your desk and
-shows, at a glance, how your security posture looks right now:
+A Raspberry Pi desk display for Elastic Security. It shows the current state
+of your SIEM at a glance:
 
-- **Open alerts by severity** — critical / high / medium / low counts, big
+- **Open alerts by severity**: critical, high, medium, and low counts, big
   enough to read from across the room
-- **Attack Discovery** — the latest AI-generated attack discoveries
-- **Entity risk scores** — the riskiest hosts and users (where the risk engine
-  is enabled)
+- **Attack Discovery**: the latest AI-generated attack discoveries
+- **Entity risk scores**: the riskiest hosts and users, where the risk engine
+  is enabled
 
-Built with Elastic's real [EUI](https://eui.elastic.co) component library
-(Borealis theme) so it looks and feels like an extension of Elastic Security,
-with full light and dark mode. Inspired by Simon's CLAUDE Inc display — this
-one shows the state of your SIEM instead.
+The frontend is built with Elastic's own [EUI](https://eui.elastic.co)
+component library, so it looks and feels like an extension of Elastic
+Security. Light and dark mode are both supported.
 
-![Severity view on a 5-inch screen, dark mode](docs/screenshots/small-dark-severity.png)
+![Severity view in dark mode](docs/screenshots/small-dark-severity.png)
 
-| 5" screen, light mode, Attack Discovery view | Large screen, everything at once |
+| Light mode, Attack Discovery view | Large screen, everything at once |
 | --- | --- |
-| ![](docs/screenshots/small-light-attack.png) | ![](docs/screenshots/large-dark-all.png) |
+| ![Attack Discovery view in light mode](docs/screenshots/small-light-attack.png) | ![All views on a large screen](docs/screenshots/large-dark-all.png) |
 
 ## How it works
 
+```text
++---------------------------- Raspberry Pi ----------------------------+
+|                                                                      |
+|  Chromium (kiosk, systemd unit)                                      |
+|      | server-sent events                                            |
+|  FastAPI backend (systemd service, 127.0.0.1:8080)                   |
+|      | polls with API key auth                                       |
++------+---------------------------------------------------------------+
+       v
+  Elasticsearch  <- alert counts, risk scores
+  Kibana         <- Attack Discovery
 ```
-┌───────────────────────────── Raspberry Pi ─────────────────────────────┐
-│                                                                        │
-│  Chromium (kiosk, systemd user unit)                                   │
-│      │  SSE                                                            │
-│  FastAPI backend (systemd service, 127.0.0.1:8080)                     │
-│      │  polls with ApiKey auth                                         │
-└──────┼─────────────────────────────────────────────────────────────────┘
-       ▼
-  Elasticsearch  ← alert counts, risk scores
-  Kibana         ← Attack Discovery
-```
 
-A small Python service polls your deployment, caches the state, and pushes
-updates to a prebuilt EUI web app over server-sent events. Chromium shows it
-full screen. If Elastic becomes unreachable the display keeps the last known
-data and says so.
+A small Python service polls your Elastic deployment, caches the state, and
+pushes updates to a prebuilt EUI web app over server-sent events. Chromium
+shows the app full screen. If Elastic becomes unreachable, the display keeps
+the last known data and marks it as stale.
 
-## Works with any Elastic deployment
+Data sources that your deployment does not offer (for example Attack
+Discovery on an older stack, or risk scores without the right licence tier)
+are detected at startup and their tiles are hidden. Alerts are the only
+required source.
 
-Elastic Cloud hosted, self-managed, and serverless security projects are all
-supported — authentication is a single API key
-([minimal privileges guide](docs/api-key-privileges.md)).
+## Requirements
 
-## Works on any Raspberry Pi and screen
+- Any Raspberry Pi with a screen. Tested on a Pi 3B with a 3.5 inch SPI
+  touchscreen and on larger HDMI displays. The layout adapts to the
+  resolution: small screens show one view at a time with tap to cycle,
+  larger screens show more side by side.
+- Raspberry Pi OS (Lite or Desktop), with SSH access.
+- An Elastic deployment with Elastic Security. Elastic Cloud hosted,
+  self-managed, and serverless projects are all supported.
+- Network access from the Pi to your Elastic endpoints on port 443, plus
+  NTP so the clock stays correct for TLS.
 
-Tested baselines are a Pi 3B with a 3.5-inch 480×320 SPI touchscreen and larger HDMI/DSI panels. The layout
-adapts: small screens show one view at a time (tap to cycle), bigger screens
-show more side by side. Touch is optional — without it the display just shows
-the severity view.
+## Setup
 
-- **Tap** — cycle views
-- **Tap top-right corner** — toggle light/dark mode (persists)
+Three steps, all over SSH. The full walkthrough, including screen types and
+troubleshooting, is in [docs/setup.md](docs/setup.md).
 
-## Install
+### 1. Create an API key
 
-On the Pi (Raspberry Pi OS with desktop), over SSH:
+The display needs a read-only API key. See
+[docs/api-key-privileges.md](docs/api-key-privileges.md) for a Dev Tools
+request that grants the minimum privileges, or create a key in Kibana as a
+read-only security analyst user.
+
+### 2. Run the installer on the Pi
 
 ```bash
-sudo bash install.sh                       # fetches the latest release
-sudo bash install.sh --from-file <tarball> # air-gapped install
+curl -fsSL https://raw.githubusercontent.com/jamesagarside/elastic-pi-display/main/deploy/install.sh -o install.sh
+sudo bash install.sh                       # standard install
 sudo bash install.sh --spi-panel           # GPIO SPI TFT screens (see docs/setup.md)
+sudo bash install.sh --from-file <tarball> # air-gapped install from a copied release
 ```
 
-The installer sets up the service user, systemd units, kiosk autostart, and
-runs an interactive setup wizard that live-tests your connection before
-writing any config. Full walkthrough: [docs/setup.md](docs/setup.md).
+The installer creates a service user, installs the backend and the prebuilt
+frontend (no Node.js needed on the Pi), sets up the kiosk, and disables
+screen blanking.
 
-Administration is all over SSH:
+### 3. Configure and reboot
 
 ```bash
-elastic-display setup   # (re)configure — deployment type, URLs, API key, space
-elastic-display test    # probe each data source, show what's available
-journalctl -u elastic-pi-display -f
+sudo elastic-display setup   # asks for URLs, API key, and space, then tests them
+sudo reboot
 ```
 
-## Creating the API key
+The wizard tests every data source against your deployment and shows what is
+available before writing any config.
 
-An index-only read key covers the severity and risk tiles, but **Attack
-Discovery is a Kibana API**, so the key also needs Kibana feature privileges.
-Run this in **Kibana → Dev Tools** (change `default` in both places if your
-alerts live in another space), then paste the `encoded` value into
-`elastic-display setup`:
+## Day-to-day administration
 
-```json
-POST /_security/api_key
-{
-  "name": "elastic-pi-display",
-  "role_descriptors": {
-    "elastic_pi_display_read": {
-      "indices": [
-        {
-          "names": [
-            ".alerts-security.alerts-default",
-            "risk-score.risk-score-latest-default"
-          ],
-          "privileges": ["read", "view_index_metadata"]
-        }
-      ],
-      "applications": [
-        {
-          "application": "kibana-.kibana",
-          "privileges": [
-            "feature_siemV3.read",
-            "feature_securitySolutionAttackDiscovery.read",
-            "feature_securitySolutionAssistant.read"
-          ],
-          "resources": ["space:default"]
-        }
-      ]
-    }
-  }
-}
+```bash
+elastic-display test                          # re-test all data sources
+sudo elastic-display setup                    # change settings or rotate the API key
+journalctl -u elastic-pi-display -f           # backend logs
+curl -s localhost:8080/api/health             # health check
 ```
 
-> **Using the API keys UI instead?** The form posts to a different (Kibana)
-> endpoint with its own shape, so the full request above will be rejected with
-> a `role_descriptors.indices: expected a plain object` validation error. In
-> **Stack Management → API keys → Control security privileges**, paste only
-> the inner object — everything from `"elastic_pi_display_read": { … }` —
-> and set the name in the form field.
+To update, re-run the installer. It replaces the application but never
+touches your config.
 
-The Security feature IDs have changed across stack versions (`feature_siem` →
-`feature_siemV2` → `feature_siemV3`). If `elastic-display test` reports Attack
-Discovery as unavailable with a 403, list your version's IDs with
-`GET kbn:/api/security/privileges` in Dev Tools and adjust — details and a
-simpler UI-based alternative in
-[docs/api-key-privileges.md](docs/api-key-privileges.md).
+On the display itself: tap to cycle views, and tap the top-right corner to
+switch between light and dark mode. The choice persists across reboots.
 
 ## Development
 
@@ -138,7 +113,7 @@ simpler UI-based alternative in
 python3 -m venv .venv && .venv/bin/pip install -e "backend[dev]"
 cd backend && ../.venv/bin/python -m pytest
 
-# run backend against your deployment (config in ~/.config/elastic-pi-display/)
+# run the backend against your deployment (config in ~/.config/elastic-pi-display/)
 .venv/bin/elastic-display setup
 .venv/bin/elastic-display run
 
@@ -146,17 +121,23 @@ cd backend && ../.venv/bin/python -m pytest
 cd frontend && npm install && npm run dev
 ```
 
-Releases are built by GitHub Actions on version tags (`v*`): frontend bundle +
-backend wheel + deploy scripts in one tarball, so the Pi never needs Node.js.
+Releases are built by GitHub Actions on version tags (`v*`): the frontend
+bundle, the backend wheel, and the deploy scripts are packaged into one
+tarball, so the Pi never needs Node.js.
 
 ## Repository layout
 
 | Path | What |
 | --- | --- |
 | `backend/` | FastAPI service, Elastic data sources, setup wizard CLI |
-| `frontend/` | Vite + React + EUI (Borealis) kiosk app |
-| `deploy/` | `install.sh`, systemd units, Chromium kiosk launcher |
+| `frontend/` | Vite + React + EUI kiosk app |
+| `deploy/` | `install.sh`, systemd units, kiosk launchers |
 | `docs/` | Setup guide, API key privilege guide |
+
+## Credits
+
+Inspired by Simon's CLAUDE Inc desk display. This one shows the state of
+your SIEM instead.
 
 ## License
 

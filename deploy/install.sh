@@ -67,7 +67,7 @@ resolve_artifacts() {
     url="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
       | grep -o '"browser_download_url": *"[^"]*\.tar\.gz"' \
       | head -1 | cut -d'"' -f4)"
-    [ -n "${url}" ] || die "no release tarball found — build one or use --from-file"
+    [ -n "${url}" ] || die "no release tarball found: build one or use --from-file"
     curl -fsSL "${url}" -o "${WORK_DIR}/release.tar.gz"
     tar -xzf "${WORK_DIR}/release.tar.gz" -C "${WORK_DIR}" --strip-components=1
     ARTIFACT_DIR="${WORK_DIR}"
@@ -144,7 +144,7 @@ else
     "${ARTIFACT_DIR}/deploy/systemd/elastic-pi-display-kiosk-x11.service" \
     > /etc/systemd/system/elastic-pi-display-kiosk.service
   chmod 0644 /etc/systemd/system/elastic-pi-display-kiosk.service
-  # Resolves the panel's fb number at each start — numbering isn't boot-stable.
+  # Resolves the panel's fb number at each start: numbering isn't boot-stable.
   install -m 0755 "${ARTIFACT_DIR}/deploy/x11/set-fbdev.sh" "${INSTALL_DIR}/set-fbdev.sh"
   # The X wrapper must allow a systemd-started (non-console-login) session.
   printf "allowed_users=anybody\nneeds_root_rights=yes\n" > /etc/X11/Xwrapper.config
@@ -176,10 +176,10 @@ done
 # --- 7. Configuration ---------------------------------------------------------
 if [ ! -f "${CONFIG_DIR}/config.toml" ]; then
   if [ -t 0 ]; then
-    log "No config yet — running the setup wizard"
+    log "No config yet: running the setup wizard"
     ESD_CONFIG="${CONFIG_DIR}/config.toml" elastic-display setup
   else
-    log "No config yet and no interactive terminal — run this when ready:"
+    log "No config yet and no interactive terminal: run this when ready:"
     log "  sudo elastic-display setup"
   fi
 fi

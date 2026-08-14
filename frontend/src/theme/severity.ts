@@ -12,9 +12,9 @@ export const SEVERITY_LABELS: Record<Severity, string> = {
 };
 
 /**
- * Map alert severities to the Borealis semantic severity palette — the same
- * tokens Elastic Security uses — falling back to the classic semantic colours
- * if a future EUI version reshapes the palette.
+ * Map alert severities to the Borealis semantic severity palette (the same
+ * tokens Elastic Security uses), falling back to the classic semantic
+ * colours if a future EUI version reshapes the palette.
  */
 export function severityColor(euiTheme: UseEuiTheme['euiTheme'], severity: Severity): string {
   const palette = (euiTheme.colors as Record<string, any>).severity ?? {};

@@ -41,7 +41,7 @@ class Source(ABC):
             if e.status_code in UNAVAILABLE_STATUS_CODES:
                 return ProbeResult(available=False, detail=str(e))
             return ProbeResult(available=True, detail=f"transient: {e}")
-        except Exception as e:  # network errors etc. — assume transient
+        except Exception as e:  # network errors etc.: assume transient
             return ProbeResult(available=True, detail=f"transient: {e}")
         return ProbeResult(available=True, detail="ok")
 

@@ -7,7 +7,7 @@ export function loadColorMode(): ColorMode {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'light' || stored === 'dark') return stored;
   } catch {
-    // localStorage unavailable — fall through to default
+    // localStorage unavailable: fall through to default
   }
   return 'dark';
 }

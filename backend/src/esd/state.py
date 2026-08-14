@@ -12,7 +12,7 @@ class SourceStatus(StrEnum):
     PENDING = "pending"          # no successful fetch yet
     OK = "ok"
     STALE = "stale"              # last data kept, but fetches keep failing
-    UNAVAILABLE = "unavailable"  # probe failed (404/403/tier-gated) — hide the tile
+    UNAVAILABLE = "unavailable"  # probe failed (404/403/tier-gated): hide the tile
 
 
 # A source flips OK -> STALE after this many consecutive fetch failures.

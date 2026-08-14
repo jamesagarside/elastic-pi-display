@@ -16,7 +16,7 @@ htmlcov/
 node_modules/
 frontend/dist/
 
-# Local config & secrets — never commit an API key
+# Local config and secrets. Never commit an API key.
 config.toml
 *.local.toml
 .env
