@@ -4,9 +4,13 @@
 // @ts-expect-error: deep ES module path has no type declarations
 import { appendIconComponentCache } from '@elastic/eui/es/components/icon/icon';
 // @ts-expect-error: icon asset modules ship without type declarations
-import { icon as logoSecurity } from '@elastic/eui/es/components/icon/assets/logo_security';
+import { icon as bell } from '@elastic/eui/es/components/icon/assets/bell';
 // @ts-expect-error: icon asset modules ship without type declarations
 import { icon as gear } from '@elastic/eui/es/components/icon/assets/gear';
+// @ts-expect-error: icon asset modules ship without type declarations
+import { icon as logoObservability } from '@elastic/eui/es/components/icon/assets/logo_observability';
+// @ts-expect-error: icon asset modules ship without type declarations
+import { icon as logoSecurity } from '@elastic/eui/es/components/icon/assets/logo_security';
 // @ts-expect-error: icon asset modules ship without type declarations
 import { icon as moon } from '@elastic/eui/es/components/icon/assets/moon';
 // @ts-expect-error: icon asset modules ship without type declarations
@@ -20,7 +24,9 @@ import { icon as user } from '@elastic/eui/es/components/icon/assets/user';
 
 export function registerIcons(): void {
   appendIconComponentCache({
+    bell,
     gear,
+    logoObservability,
     logoSecurity,
     moon,
     sparkles,
