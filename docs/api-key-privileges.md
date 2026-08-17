@@ -1,13 +1,18 @@
 # API key privileges
 
-The display is read-only. It searches two index patterns and calls one Kibana
-API, so give it the least privilege that covers those.
+The display is read-only. Give it the least privilege that covers the
+searches and API calls below. Sources whose data or APIs are missing hide
+their tiles, so a key covering only what your deployment has is fine.
 
 | Data source | Call | Needs |
 | --- | --- | --- |
 | Alert severity counts and recent alerts | `POST <es>/.alerts-security.alerts-<space>/_search` | index `read` |
 | Entity risk scores | `POST <es>/risk-score.risk-score-latest-<space>/_search`, falling back to `.entities.v2.latest.security_<space>-*` on Entity Store V2 stacks | index `read` on both patterns (tile hides if neither exists) |
 | Attack Discovery | `GET <kibana>/api/attack_discovery/_find` | Kibana Security feature privileges, plus index `read` on the attack discovery alert indices on stacks that store discoveries as alerts |
+| Observability alerts | `POST <es>/.alerts-observability.*/_search` | index `read` |
+| SLO health | `GET <kibana>/api/observability/slos` | Kibana `feature_slo.read` |
+| Infrastructure hosts | `POST <es>/metrics-*/_search` | index `read` |
+| APM services | `POST <es>/traces-apm*/_search` | index `read` |
 
 Alerts are the only required source. A key with just the index privileges
 runs the display fine; Attack Discovery stays hidden until the key also has
@@ -32,7 +37,11 @@ POST /_security/api_key
             ".alerts-security.attack.discovery.alerts*",
             ".adhoc.alerts-security.attack.discovery.alerts*",
             ".entities.v2.latest.security_*",
-            "risk-score.risk-score-latest-default"
+            "risk-score.risk-score-latest-default",
+            ".alerts-observability.*",
+            "metrics-*",
+            "traces-apm*",
+            "metrics-apm*"
           ],
           "privileges": ["read", "view_index_metadata"]
         }
@@ -43,7 +52,8 @@ POST /_security/api_key
           "privileges": [
             "feature_siemV3.read",
             "feature_securitySolutionAttackDiscovery.all",
-            "feature_securitySolutionAssistant.read"
+            "feature_securitySolutionAssistant.read",
+            "feature_slo.read"
           ],
           "resources": ["space:default"]
         }

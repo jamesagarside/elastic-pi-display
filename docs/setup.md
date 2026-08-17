@@ -135,6 +135,14 @@ dashboard.
   scores) on small screens. Larger screens show views side by side.
 - Tap a severity tile to see that severity's most recent alerts by rule
   name. Tap again to go back, or wait 30 seconds and it returns on its own.
+- If your deployment has observability data (observability alerts, SLOs,
+  host metrics, or APM services), a logo appears in the top-left corner:
+  tap it to switch between the Security and Observability modes, each with
+  its own set of views. The status bar shows which mode you are in, and
+  the choice persists across reboots. Sources your deployment lacks are
+  hidden; sources that appear later (your first SLO, first observability
+  rule, first instrumented service) are picked up on the next backend
+  restart.
 - Tap the sun/moon icon in the top-right corner to toggle light and dark
   mode. The choice persists across reboots.
 - The status bar shows a Live / Elastic unreachable / Display offline pill,
