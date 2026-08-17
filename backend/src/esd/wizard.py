@@ -152,6 +152,10 @@ SOURCE_LABELS = {
     "alerts": "Security alerts",
     "attack_discovery": "Attack Discovery",
     "risk_scores": "Entity risk scores",
+    "observability_alerts": "Observability alerts",
+    "slos": "SLO health",
+    "hosts": "Infrastructure hosts",
+    "apm_services": "APM services",
 }
 
 

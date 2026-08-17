@@ -49,6 +49,10 @@ class PollConfig(BaseModel):
     alerts_seconds: int = Field(default=30, ge=5)
     attack_discovery_seconds: int = Field(default=300, ge=30)
     risk_scores_seconds: int = Field(default=300, ge=30)
+    observability_alerts_seconds: int = Field(default=60, ge=5)
+    slos_seconds: int = Field(default=300, ge=30)
+    hosts_seconds: int = Field(default=60, ge=15)
+    apm_services_seconds: int = Field(default=120, ge=30)
 
 
 class DataConfig(BaseModel):

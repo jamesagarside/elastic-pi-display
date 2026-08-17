@@ -5,7 +5,15 @@ import pytest
 import respx
 
 from esd.elastic.client import ElasticClient, ElasticError
-from esd.elastic.sources import AlertsSource, AttackDiscoverySource, RiskScoresSource
+from esd.elastic.sources import (
+    AlertsSource,
+    ApmServicesSource,
+    AttackDiscoverySource,
+    HostsSource,
+    ObservabilityAlertsSource,
+    RiskScoresSource,
+    SloSource,
+)
 
 from conftest import ES_URL, KIBANA_URL
 
@@ -163,3 +171,155 @@ async def test_kibana_space_prefix(config, attack_discovery_response):
     )
     await AttackDiscoverySource(client, 300, window="now-7d").fetch()
     assert route.called
+
+
+OBS_RESOLVE = f"{ES_URL}/_resolve/index/{quote('.alerts-observability.*', safe='')}"
+OBS_SEARCH = f"{ES_URL}/{quote('.alerts-observability.*', safe='')}/_search"
+SLO_FIND = f"{KIBANA_URL}/api/observability/slos"
+METRICS_SEARCH = f"{ES_URL}/metrics-*/_search"
+APM_SEARCH = f"{ES_URL}/{quote('traces-apm*', safe='')}/_search"
+
+
+@respx.mock
+async def test_obs_alerts_probe_no_indices_unavailable(client):
+    respx.get(OBS_RESOLVE).respond(json={"indices": [], "aliases": [], "data_streams": []})
+    probe = await ObservabilityAlertsSource(client, 60).probe()
+    assert probe.available is False
+
+
+@respx.mock
+async def test_obs_alerts_fetch(client):
+    respx.post(OBS_SEARCH).respond(
+        json={
+            "hits": {
+                "total": {"value": 3},
+                "hits": [
+                    {
+                        "_source": {
+                            "kibana.alert.rule.name": "CPU threshold",
+                            "kibana.alert.rule.category": "Metric threshold",
+                            "kibana.alert.reason": "CPU is 91% on talos-2",
+                            "kibana.alert.start": "2026-08-17T20:00:00Z",
+                        }
+                    }
+                ],
+            }
+        }
+    )
+    data = await ObservabilityAlertsSource(client, 60).fetch()
+    assert data["active"] == 3
+    assert data["recent"][0]["rule_name"] == "CPU threshold"
+
+
+@respx.mock
+async def test_slos_probe_no_slos_unavailable(client):
+    respx.get(SLO_FIND).respond(json={"total": 0, "results": []})
+    probe = await SloSource(client, 300).probe()
+    assert probe.available is False
+
+
+@respx.mock
+async def test_slos_fetch_sorts_violated_first(client):
+    respx.get(SLO_FIND).respond(
+        json={
+            "total": 2,
+            "results": [
+                {
+                    "name": "API availability",
+                    "objective": {"target": 0.99},
+                    "summary": {
+                        "status": "HEALTHY",
+                        "sliValue": 0.999,
+                        "errorBudget": {"remaining": 0.9},
+                    },
+                },
+                {
+                    "name": "Latency",
+                    "objective": {"target": 0.95},
+                    "summary": {
+                        "status": "VIOLATED",
+                        "sliValue": 0.91,
+                        "errorBudget": {"remaining": -0.2},
+                    },
+                },
+            ],
+        }
+    )
+    data = await SloSource(client, 300).fetch()
+    assert data["slos"][0]["name"] == "Latency"
+    assert data["slos"][0]["status"] == "VIOLATED"
+
+
+@respx.mock
+async def test_hosts_probe_no_metrics_unavailable(client):
+    respx.post(METRICS_SEARCH).respond(json={"hits": {"total": {"value": 0}}})
+    probe = await HostsSource(client, 60).probe()
+    assert probe.available is False
+
+
+@respx.mock
+async def test_hosts_fetch_both_dialects(client):
+    respx.post(METRICS_SEARCH).respond(
+        json={
+            "hits": {"total": {"value": 100}},
+            "aggregations": {
+                "hosts": {
+                    "buckets": [
+                        {
+                            "key": "talos-1",
+                            "cpu_idle_otel": {"v": {"value": 0.85}},
+                            "mem_used_otel": {"v": {"value": 0.42}},
+                            "cpu_elastic": {"value": None},
+                            "mem_elastic": {"value": None},
+                        },
+                        {
+                            "key": "pi-hole",
+                            "cpu_idle_otel": {"v": {"value": None}},
+                            "mem_used_otel": {"v": {"value": None}},
+                            "cpu_elastic": {"value": 0.33},
+                            "mem_elastic": {"value": 0.6},
+                        },
+                    ]
+                }
+            },
+        }
+    )
+    data = await HostsSource(client, 60).fetch()
+    by_name = {h["name"]: h for h in data["hosts"]}
+    assert by_name["talos-1"] == {"name": "talos-1", "cpu_pct": 15, "memory_pct": 42}
+    assert by_name["pi-hole"] == {"name": "pi-hole", "cpu_pct": 33, "memory_pct": 60}
+
+
+@respx.mock
+async def test_apm_probe_no_traces_unavailable(client):
+    respx.post(APM_SEARCH).respond(json={"hits": {"total": {"value": 0}}})
+    probe = await ApmServicesSource(client, 120).probe()
+    assert probe.available is False
+
+
+@respx.mock
+async def test_apm_fetch(client):
+    respx.post(APM_SEARCH).respond(
+        json={
+            "hits": {"total": {"value": 500}},
+            "aggregations": {
+                "services": {
+                    "buckets": [
+                        {
+                            "key": "checkout",
+                            "doc_count": 200,
+                            "failures": {"doc_count": 10},
+                            "latency_us": {"value": 250000},
+                        }
+                    ]
+                }
+            },
+        }
+    )
+    data = await ApmServicesSource(client, 120).fetch()
+    assert data["services"][0] == {
+        "name": "checkout",
+        "transactions": 200,
+        "error_rate_pct": 5.0,
+        "latency_ms": 250.0,
+    }
