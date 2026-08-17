@@ -9,9 +9,12 @@ from esd.sse import EventBus
 
 from conftest import ES_URL, KIBANA_URL
 
+from urllib.parse import quote
+
 ALERTS_SEARCH = f"{ES_URL}/.alerts-security.alerts-default/_search"
 AD_FIND = f"{KIBANA_URL}/api/attack_discovery/_find"
 RISK_SEARCH = f"{ES_URL}/risk-score.risk-score-latest-default/_search"
+ENTITY_SEARCH = f"{ES_URL}/{quote('.entities.v2.latest.security_default-*', safe='')}/_search"
 
 
 @pytest.fixture
@@ -29,7 +32,7 @@ def test_state_endpoint(app_client):
     snap = app_client.get("/api/state").json()
     assert snap["sources"]["alerts"]["data"]["counts"]["high"] == 5
     assert snap["sources"]["attack_discovery"]["data"]["total"] == 1
-    assert snap["sources"]["risk_scores"]["data"]["hosts"][0]["name"] == "host-1"
+    assert snap["sources"]["risk_scores"]["data"]["entities"][0]["name"] == "host-1"
     assert snap["meta"]["elastic_reachable"] is True
 
 
@@ -44,6 +47,7 @@ def test_unavailable_source_hidden_status(config, alerts_response, attack_discov
         mock.post(ALERTS_SEARCH).respond(json=alerts_response)
         mock.get(AD_FIND).respond(json=attack_discovery_response)
         mock.post(RISK_SEARCH).respond(status_code=404, json={"error": "no index"})
+        mock.post(ENTITY_SEARCH).respond(status_code=404, json={"error": "no index"})
         with TestClient(create_app(config)) as client:
             snap = client.get("/api/state").json()
     assert snap["sources"]["risk_scores"]["status"] == "unavailable"

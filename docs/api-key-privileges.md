@@ -6,7 +6,7 @@ API, so give it the least privilege that covers those.
 | Data source | Call | Needs |
 | --- | --- | --- |
 | Alert severity counts and recent alerts | `POST <es>/.alerts-security.alerts-<space>/_search` | index `read` |
-| Entity risk scores | `POST <es>/risk-score.risk-score-latest-<space>/_search` | index `read` (tile hides if the risk engine is off) |
+| Entity risk scores | `POST <es>/risk-score.risk-score-latest-<space>/_search`, falling back to `.entities.v2.latest.security_<space>-*` on Entity Store V2 stacks | index `read` on both patterns (tile hides if neither exists) |
 | Attack Discovery | `GET <kibana>/api/attack_discovery/_find` | Kibana Security feature privileges, plus index `read` on the attack discovery alert indices on stacks that store discoveries as alerts |
 
 Alerts are the only required source. A key with just the index privileges
@@ -31,6 +31,7 @@ POST /_security/api_key
             ".alerts-security.alerts-default",
             ".alerts-security.attack.discovery.alerts*",
             ".adhoc.alerts-security.attack.discovery.alerts*",
+            ".entities.v2.latest.security_*",
             "risk-score.risk-score-latest-default"
           ],
           "privileges": ["read", "view_index_metadata"]
@@ -128,14 +129,23 @@ the running display only re-probes at startup.)
 Attack Discovery public API (8.x before 8.14, roughly). Not a key problem;
 the tile hides itself and the rest of the display works.
 
-**Entity risk scores unavailable.** Usually not a key problem either: the
-`risk-score.risk-score-latest-<space>` index only exists once the risk
-engine has been enabled (**Security > Manage > Entity Risk Score**) and it
-needs a Platinum licence or better. The index is created by the engine's
-first scoring run, so expect the 404 to persist for a while after
-enabling; restart the backend once it exists. If the engine is on, the
-index exists, and the test still fails, the key is missing `read` on that
-index pattern.
+**Entity risk scores unavailable.** Usually not a key problem: risk
+scoring must be enabled (**Security > Manage > Entity Risk Score**, or the
+consolidated Entity Analytics management page on newer stacks) and needs a
+Platinum licence or better. Where the scores land depends on the stack
+generation, and the display checks both:
+
+- Legacy risk engine: `risk-score.risk-score-latest-<space>`, created by
+  the engine's first scoring run, so expect a 404 to persist for a while
+  after enabling.
+- Entity Store V2 (newer stacks; the legacy risk APIs answer "not
+  available when Entity Store V2 is enabled"): scores live on entity
+  documents in `.entities.v2.latest.security_<space>-*` instead, and the
+  legacy index is never created. The key needs `read` on that pattern,
+  included in the request above.
+
+If scoring is on and the test still fails, the key is missing `read` on
+whichever of those two patterns your stack uses.
 
 **Security alerts failing.** Check the space: the key above grants access to the
 `-default` index names, and a display configured for another space queries

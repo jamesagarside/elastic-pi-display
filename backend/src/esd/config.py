@@ -78,6 +78,12 @@ class Config(BaseModel):
     def risk_index(self) -> str:
         return f"risk-score.risk-score-latest-{self.elastic.space}"
 
+    @property
+    def entity_store_index(self) -> str:
+        # Entity Store V2 latest index (replaces the legacy risk engine
+        # storage on newer stacks); the numeric suffix varies.
+        return f".entities.v2.latest.security_{self.elastic.space}-*"
+
 
 def config_path() -> Path:
     env = os.environ.get("ESD_CONFIG")

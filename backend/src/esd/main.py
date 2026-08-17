@@ -48,6 +48,7 @@ def build_sources(cfg: Config, client: ElasticClient) -> list:
             client,
             cfg.poll.risk_scores_seconds,
             index=cfg.risk_index,
+            entity_index=cfg.entity_store_index,
         ),
     ]
 

@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 import httpx
 import pytest
 import respx
@@ -9,7 +11,14 @@ from conftest import ES_URL, KIBANA_URL
 
 ALERTS_SEARCH = f"{ES_URL}/.alerts-security.alerts-default/_search"
 AD_FIND = f"{KIBANA_URL}/api/attack_discovery/_find"
-RISK_SEARCH = f"{ES_URL}/risk-score.risk-score-latest-default/_search"
+RISK_INDEX = "risk-score.risk-score-latest-default"
+ENTITY_INDEX = ".entities.v2.latest.security_default-*"
+RISK_SEARCH = f"{ES_URL}/{RISK_INDEX}/_search"
+ENTITY_SEARCH = f"{ES_URL}/{quote(ENTITY_INDEX, safe='')}/_search"
+
+
+def risk_source(client):
+    return RiskScoresSource(client, 300, index=RISK_INDEX, entity_index=ENTITY_INDEX)
 
 
 @pytest.fixture
@@ -98,19 +107,50 @@ async def test_probe_network_error_is_transient(client):
 
 
 @respx.mock
-async def test_risk_scores(client, risk_response):
+async def test_risk_scores_legacy(client, risk_response):
     respx.post(RISK_SEARCH).respond(json=risk_response)
-    source = RiskScoresSource(client, 300, index="risk-score.risk-score-latest-default")
-    data = await source.fetch()
-    assert data["hosts"][0] == {"name": "host-1", "score": 88, "level": "High"}
+    data = await risk_source(client).fetch()
+    assert data["entities"][0] == {
+        "name": "host-1",
+        "type": "Host",
+        "score": 88,
+        "level": "High",
+    }
+    # The legacy fixture only contains a host document; the user pass must
+    # not fabricate an entry from it.
+    assert len(data["entities"]) == 1
 
 
 @respx.mock
-async def test_risk_probe_missing_index_unavailable(client):
+async def test_risk_scores_entity_store_fallback(client, entity_store_response):
     respx.post(RISK_SEARCH).respond(
         status_code=404, json={"error": {"type": "index_not_found_exception"}}
     )
-    probe = await RiskScoresSource(client, 300, index="risk-score.risk-score-latest-default").probe()
+    entity_route = respx.post(ENTITY_SEARCH).respond(json=entity_store_response)
+    source = risk_source(client)
+    data = await source.fetch()
+    assert entity_route.called
+    assert data["entities"][0] == {
+        "name": "unifi-udm",
+        "type": "Service",
+        "score": 35,
+        "level": "Low",
+    }
+    assert data["entities"][1]["type"] == "Host"
+    # The legacy index is not retried on later polls.
+    data = await source.fetch()
+    assert respx.calls.call_count == 3
+
+
+@respx.mock
+async def test_risk_probe_missing_both_indices_unavailable(client):
+    respx.post(RISK_SEARCH).respond(
+        status_code=404, json={"error": {"type": "index_not_found_exception"}}
+    )
+    respx.post(ENTITY_SEARCH).respond(
+        status_code=404, json={"error": {"type": "index_not_found_exception"}}
+    )
+    probe = await risk_source(client).probe()
     assert probe.available is False
 
 
