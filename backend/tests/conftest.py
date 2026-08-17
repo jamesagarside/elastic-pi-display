@@ -95,3 +95,37 @@ def risk_response() -> dict:
             ]
         }
     }
+
+
+@pytest.fixture
+def entity_store_response() -> dict:
+    return {
+        "hits": {
+            "hits": [
+                {
+                    "_source": {
+                        "entity": {
+                            "name": "unifi-udm",
+                            "type": "Service",
+                            "risk": {
+                                "calculated_score_norm": 34.93,
+                                "calculated_level": "Low",
+                            },
+                        }
+                    }
+                },
+                {
+                    "_source": {
+                        "entity": {
+                            "name": "host-2",
+                            "type": "Host",
+                            "risk": {
+                                "calculated_score_norm": 21.4,
+                                "calculated_level": "Low",
+                            },
+                        }
+                    }
+                },
+            ]
+        }
+    }
