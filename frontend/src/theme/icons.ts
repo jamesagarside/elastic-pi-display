@@ -6,6 +6,8 @@ import { appendIconComponentCache } from '@elastic/eui/es/components/icon/icon';
 // @ts-expect-error: icon asset modules ship without type declarations
 import { icon as logoSecurity } from '@elastic/eui/es/components/icon/assets/logo_security';
 // @ts-expect-error: icon asset modules ship without type declarations
+import { icon as gear } from '@elastic/eui/es/components/icon/assets/gear';
+// @ts-expect-error: icon asset modules ship without type declarations
 import { icon as moon } from '@elastic/eui/es/components/icon/assets/moon';
 // @ts-expect-error: icon asset modules ship without type declarations
 import { icon as sparkles } from '@elastic/eui/es/components/icon/assets/sparkles';
@@ -18,6 +20,7 @@ import { icon as user } from '@elastic/eui/es/components/icon/assets/user';
 
 export function registerIcons(): void {
   appendIconComponentCache({
+    gear,
     logoSecurity,
     moon,
     sparkles,

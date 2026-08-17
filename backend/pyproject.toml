@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "elastic-pi-display"
-version = "0.2.0"
+version = "0.3.0"
 description = "Raspberry Pi desk display for Elastic Security: alert severities and AI findings at a glance"
 requires-python = ">=3.11"
 license = { text = "MIT" }

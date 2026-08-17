@@ -1,6 +1,5 @@
 import {
-  EuiFlexGroup,
-  EuiFlexItem,
+  EuiEmptyPrompt,
   EuiIcon,
   EuiPanel,
   EuiProgress,
@@ -16,9 +15,21 @@ interface Props {
   riskScores: SourceState<RiskData>;
 }
 
+/** Entity Store types → registered icons; anything unrecognised gets gear. */
+function entityIcon(type: string | null): string {
+  switch ((type ?? '').toLowerCase()) {
+    case 'host':
+      return 'storage';
+    case 'user':
+      return 'user';
+    default:
+      return 'gear';
+  }
+}
+
 export function RiskView({ riskScores }: Props) {
   const { euiTheme } = useEuiTheme();
-  const data = riskScores.data;
+  const entities = riskScores.data?.entities ?? [];
 
   return (
     <div
@@ -36,57 +47,37 @@ export function RiskView({ riskScores }: Props) {
           {riskScores.status === 'stale' ? ' · showing last known data' : ''}
         </span>
       </EuiText>
-      <EuiFlexGroup gutterSize="s" css={css`flex: 1; min-height: 0;`} responsive={false}>
-        <EntityColumn icon="storage" title="Hosts" entities={data?.hosts ?? []} />
-        <EntityColumn icon="user" title="Users" entities={data?.users ?? []} />
-      </EuiFlexGroup>
-    </div>
-  );
-}
-
-function EntityColumn({
-  icon,
-  title,
-  entities,
-}: {
-  icon: string;
-  title: string;
-  entities: RiskEntity[];
-}) {
-  const { euiTheme } = useEuiTheme();
-  return (
-    <EuiFlexItem>
-      <EuiPanel hasBorder paddingSize="m" css={css`height: 100%;`}>
-        <EuiText size="s">
-          <span
-            css={css`
-              font-weight: ${euiTheme.font.weight.semiBold};
-              display: inline-flex;
-              align-items: center;
-              gap: ${euiTheme.size.xs};
-            `}
-          >
-            <EuiIcon type={icon} size="s" /> {title}
-          </span>
-        </EuiText>
-        <div
+      {entities.length === 0 ? (
+        <EuiEmptyPrompt
+          iconType="user"
+          title={<h2>No scored entities</h2>}
+          body={<p>The risk engine has not scored anything yet.</p>}
+          titleSize="s"
+        />
+      ) : (
+        <EuiPanel
+          hasBorder
+          paddingSize="m"
           css={css`
-            display: flex;
-            flex-direction: column;
-            gap: ${euiTheme.size.m};
-            margin-top: ${euiTheme.size.m};
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
           `}
         >
-          {entities.length === 0 ? (
-            <EuiText size="xs" color="subdued">
-              <span>No scored entities</span>
-            </EuiText>
-          ) : (
-            entities.map((entity) => <EntityRow key={entity.name} entity={entity} />)
-          )}
-        </div>
-      </EuiPanel>
-    </EuiFlexItem>
+          <div
+            css={css`
+              display: flex;
+              flex-direction: column;
+              gap: ${euiTheme.size.m};
+            `}
+          >
+            {entities.map((entity) => (
+              <EntityRow key={`${entity.type}:${entity.name}`} entity={entity} />
+            ))}
+          </div>
+        </EuiPanel>
+      )}
+    </div>
   );
 }
 
@@ -98,6 +89,7 @@ function EntityRow({ entity }: { entity: RiskEntity }) {
       <div
         css={css`
           display: flex;
+          align-items: center;
           justify-content: space-between;
           gap: ${euiTheme.size.s};
           margin-bottom: ${euiTheme.size.xs};
@@ -106,11 +98,20 @@ function EntityRow({ entity }: { entity: RiskEntity }) {
         <EuiText size="s">
           <span
             css={css`
+              display: inline-flex;
+              align-items: center;
+              gap: ${euiTheme.size.xs};
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
             `}
           >
+            <EuiIcon
+              type={entityIcon(entity.type)}
+              size="s"
+              color="subdued"
+              title={entity.type ?? undefined}
+            />
             {entity.name}
           </span>
         </EuiText>

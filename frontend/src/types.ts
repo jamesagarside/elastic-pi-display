@@ -46,13 +46,14 @@ export interface AttackDiscoveryData {
 
 export interface RiskEntity {
   name: string;
+  /** Entity Store type: "Host", "User", "Service", ... (null on old data). */
+  type: string | null;
   score: number;
   level: string | null;
 }
 
 export interface RiskData {
-  hosts: RiskEntity[];
-  users: RiskEntity[];
+  entities: RiskEntity[];
 }
 
 export interface SourceState<T> {
