@@ -1,4 +1,4 @@
-import { EuiProvider, useEuiTheme } from '@elastic/eui';
+import { EuiIcon, EuiProvider, useEuiTheme } from '@elastic/eui';
 import { EuiThemeBorealis } from '@elastic/eui-theme-borealis';
 import { css } from '@emotion/react';
 import { useMemo, useState } from 'react';
@@ -36,12 +36,18 @@ export default function App() {
 
   return (
     <EuiProvider theme={EuiThemeBorealis} colorMode={colorMode}>
-      <Display onToggleColorMode={toggleColorMode} />
+      <Display colorMode={colorMode} onToggleColorMode={toggleColorMode} />
     </EuiProvider>
   );
 }
 
-function Display({ onToggleColorMode }: { onToggleColorMode: () => void }) {
+function Display({
+  colorMode,
+  onToggleColorMode,
+}: {
+  colorMode: ColorMode;
+  onToggleColorMode: () => void;
+}) {
   const { euiTheme } = useEuiTheme();
   const { snapshot, connected } = useEventStream();
   const tier = useLayoutTier();
@@ -99,11 +105,23 @@ function Display({ onToggleColorMode }: { onToggleColorMode: () => void }) {
           right: 0;
           width: 48px;
           height: 48px;
+          display: flex;
+          align-items: flex-start;
+          justify-content: flex-end;
+          padding: ${euiTheme.size.s};
           background: transparent;
           border: none;
           cursor: none;
+          /* Visible but unobtrusive on a wall display */
+          opacity: 0.5;
         `}
-      />
+      >
+        <EuiIcon
+          type={colorMode === 'dark' ? 'sun' : 'moon'}
+          size="s"
+          color="subdued"
+        />
+      </button>
     </div>
   );
 }

@@ -6,9 +6,11 @@ import { SEVERITY_LABELS, Severity, severityColor } from '../theme/severity';
 interface Props {
   severity: Severity;
   count: number;
+  /** Called on tap when the tile has alerts to show. */
+  onSelect?: () => void;
 }
 
-export function SeverityTile({ severity, count }: Props) {
+export function SeverityTile({ severity, count, onSelect }: Props) {
   const { euiTheme } = useEuiTheme();
   const color = severityColor(euiTheme, severity);
   const active = count > 0;
@@ -17,6 +19,15 @@ export function SeverityTile({ severity, count }: Props) {
     <EuiPanel
       hasBorder
       paddingSize="m"
+      onClick={
+        active && onSelect
+          ? (e: React.MouseEvent) => {
+              // Keep the tap from also cycling views.
+              e.stopPropagation();
+              onSelect();
+            }
+          : undefined
+      }
       css={css`
         height: 100%;
         display: flex;
