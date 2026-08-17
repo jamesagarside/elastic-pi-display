@@ -56,6 +56,21 @@ flag switches the kiosk from Wayland to a minimal X11 server, because these
 panels expose only a legacy framebuffer that Wayland compositors cannot draw
 to. The panel's framebuffer device is detected automatically at each start.
 
+Touch on these panels: the resistive controller (ADS7846/XPT2046) works out
+of the box, but its axes do not follow the display's `rotate=` value. The
+installer ships a calibration for the `rotate=270` example above in
+`/etc/X11/xorg.conf.d/40-touch-calibration.conf`. If you use a different
+rotation and taps land in the wrong place, edit the `CalibrationMatrix` in
+that file; the common matrices are listed in its comments. To check where
+taps land, run `sudo apt install xinput` and then, while the kiosk is up,
+`sudo -u pi DISPLAY=:0 xinput test-xi2 --root` and tap the corners.
+
+Note that on the small-screen layout a tap on the background cycles between
+views, while a tap on a severity tile shows that severity's recent alerts.
+If your deployment only offers alerts (no Attack Discovery, no risk scores)
+there is only one view, so background taps change nothing; the view dots in
+the status bar show when there is more than one view to cycle through.
+
 ## 3. Install on the Pi
 
 ```bash
@@ -118,8 +133,10 @@ dashboard.
 
 - Tap the screen to cycle between views (severity, Attack Discovery, risk
   scores) on small screens. Larger screens show views side by side.
-- Tap the top-right corner to toggle light and dark mode. The choice
-  persists across reboots.
+- Tap a severity tile to see that severity's most recent alerts by rule
+  name. Tap again to go back, or wait 30 seconds and it returns on its own.
+- Tap the sun/moon icon in the top-right corner to toggle light and dark
+  mode. The choice persists across reboots.
 - The status bar shows a Live / Elastic unreachable / Display offline pill,
   the Kibana space, and when data was last updated. If Elastic becomes
   unreachable the display keeps showing the last known data, marked as such.
@@ -132,6 +149,23 @@ journalctl -u elastic-pi-display -f               # backend logs
 systemctl status elastic-pi-display-kiosk         # kiosk status
 curl -s localhost:8080/api/health | python3 -m json.tool
 ```
+
+## Viewing from another device
+
+By default the backend listens on `127.0.0.1`, so only the Pi's own kiosk
+can see it. To open the display in a browser on another machine, set the
+listen address in `/etc/elastic-pi-display/config.toml`:
+
+```toml
+[server]
+host = "0.0.0.0"
+port = 8080
+```
+
+then `sudo systemctl restart elastic-pi-display` and browse to
+`http://<pi-address>:8080`. There is no authentication on this page: anyone
+who can reach the port sees your alert data (not the API key, which never
+leaves the backend). Only do this on a network you trust.
 
 ## Updating
 
@@ -184,3 +218,8 @@ UI from the Pi, so it needs no other outbound access at runtime.
 - **Sluggish on a Pi 3**: enable zram swap with `sudo apt install zram-tools`,
   and use a proper 2.5 A power supply. Undervoltage (see `dmesg`) throttles
   the CPU and can destabilise WiFi.
+- **Everything works but the tiles stay at zero**: the display only counts
+  what your detection rules generate. If your data comes from network gear
+  rather than endpoints, see
+  [unifi-detection-rules.md](unifi-detection-rules.md) for the prebuilt
+  rules worth enabling on UniFi (and similar firewall/flow) data.

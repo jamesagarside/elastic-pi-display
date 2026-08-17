@@ -146,6 +146,11 @@ else
   chmod 0644 /etc/systemd/system/elastic-pi-display-kiosk.service
   # Resolves the panel's fb number at each start: numbering isn't boot-stable.
   install -m 0755 "${ARTIFACT_DIR}/deploy/x11/set-fbdev.sh" "${INSTALL_DIR}/set-fbdev.sh"
+  # Aligns the resistive touch axes with the rotated framebuffer (the overlay's
+  # rotate= only rotates the display, not the touch controller).
+  mkdir -p /etc/X11/xorg.conf.d
+  install -m 0644 "${ARTIFACT_DIR}/deploy/x11/40-touch-calibration.conf" \
+    /etc/X11/xorg.conf.d/40-touch-calibration.conf
   # The X wrapper must allow a systemd-started (non-console-login) session.
   printf "allowed_users=anybody\nneeds_root_rights=yes\n" > /etc/X11/Xwrapper.config
   systemctl disable --now getty@tty1.service 2>/dev/null || true
@@ -190,7 +195,10 @@ fi
 
 # --- 8. Start services --------------------------------------------------------
 log "Enabling services"
-systemctl enable --now elastic-pi-display.service
+systemctl enable elastic-pi-display.service
+# Restart rather than start: on updates the running service must pick up the
+# new code.
+systemctl restart elastic-pi-display.service
 if [ "${KIOSK_MODE}" = "desktop" ]; then
   KIOSK_UID="$(id -u "${KIOSK_USER}")"
   sudo -u "${KIOSK_USER}" XDG_RUNTIME_DIR="/run/user/${KIOSK_UID}" \

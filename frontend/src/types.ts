@@ -7,8 +7,22 @@ export interface SeverityCounts {
   low: number;
 }
 
+export interface AlertSummary {
+  rule_name: string;
+  timestamp: string | null;
+  host: string | null;
+  user: string | null;
+}
+
 export interface AlertsData {
   counts: SeverityCounts;
+  /** Most recent alerts per severity, for the tile drill-down. */
+  recent?: {
+    critical: AlertSummary[];
+    high: AlertSummary[];
+    medium: AlertSummary[];
+    low: AlertSummary[];
+  };
   total_open: number;
   window: string;
 }

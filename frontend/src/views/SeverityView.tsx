@@ -1,10 +1,15 @@
 import { EuiText, useEuiTheme } from '@elastic/eui';
 import { css } from '@emotion/react';
+import { useEffect, useState } from 'react';
 
+import { AlertList } from '../components/AlertList';
 import { SeverityTile } from '../components/SeverityTile';
-import { SEVERITY_ORDER } from '../theme/severity';
+import { SEVERITY_ORDER, Severity } from '../theme/severity';
 import { windowLabel } from '../time';
 import type { AlertsData, SourceState } from '../types';
+
+/** Return the drill-down to the tiles if nobody taps it away. */
+const DRILLDOWN_TIMEOUT_MS = 30_000;
 
 interface Props {
   alerts: SourceState<AlertsData>;
@@ -15,6 +20,24 @@ interface Props {
 export function SeverityView({ alerts, compact }: Props) {
   const { euiTheme } = useEuiTheme();
   const data = alerts.data;
+  const [selected, setSelected] = useState<Severity | null>(null);
+
+  useEffect(() => {
+    if (!selected) return;
+    const timer = setTimeout(() => setSelected(null), DRILLDOWN_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [selected]);
+
+  if (selected && data) {
+    return (
+      <AlertList
+        severity={selected}
+        count={data.counts[selected]}
+        alerts={data.recent?.[selected] ?? []}
+        onClose={() => setSelected(null)}
+      />
+    );
+  }
 
   return (
     <div
@@ -47,6 +70,7 @@ export function SeverityView({ alerts, compact }: Props) {
             key={severity}
             severity={severity}
             count={data?.counts[severity] ?? 0}
+            onSelect={() => setSelected(severity)}
           />
         ))}
       </div>

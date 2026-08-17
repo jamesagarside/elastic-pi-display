@@ -28,3 +28,6 @@ config.toml
 
 # Release artifacts
 *.tar.gz
+
+# Build metadata
+*.tsbuildinfo

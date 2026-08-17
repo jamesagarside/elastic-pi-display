@@ -103,8 +103,11 @@ curl -s localhost:8080/api/health             # health check
 To update, re-run the installer. It replaces the application but never
 touches your config.
 
-On the display itself: tap to cycle views, and tap the top-right corner to
-switch between light and dark mode. The choice persists across reboots.
+On the display itself: tap to cycle views, and tap a severity tile to see
+that severity's most recent alerts (tap again to go back; it also returns
+on its own after 30 seconds). The sun/moon icon in the top-right corner
+switches between light and dark mode, and the choice persists across
+reboots.
 
 ## Development
 
@@ -132,7 +135,7 @@ tarball, so the Pi never needs Node.js.
 | `backend/` | FastAPI service, Elastic data sources, setup wizard CLI |
 | `frontend/` | Vite + React + EUI kiosk app |
 | `deploy/` | `install.sh`, systemd units, kiosk launchers |
-| `docs/` | Setup guide, API key privilege guide |
+| `docs/` | Setup guide, API key privilege guide, UniFi detection rules guide |
 
 ## Credits
 

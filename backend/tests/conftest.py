@@ -19,6 +19,10 @@ def config() -> Config:
     )
 
 
+def _recent_hits(*hits: dict) -> dict:
+    return {"recent": {"hits": {"hits": [{"_source": h} for h in hits]}}}
+
+
 @pytest.fixture
 def alerts_response() -> dict:
     return {
@@ -26,8 +30,29 @@ def alerts_response() -> dict:
         "aggregations": {
             "severity": {
                 "buckets": [
-                    {"key": "critical", "doc_count": 2},
-                    {"key": "high", "doc_count": 5},
+                    {
+                        "key": "critical",
+                        "doc_count": 2,
+                        **_recent_hits(
+                            {
+                                "kibana": {"alert": {"rule": {"name": "Malware Detection"}}},
+                                "@timestamp": "2026-08-14T10:00:00Z",
+                                "host": {"name": "host-1"},
+                                "user": {"name": "alice"},
+                            },
+                            {
+                                "kibana": {"alert": {"rule": {"name": "Ransomware Behavior"}}},
+                                "@timestamp": "2026-08-14T09:30:00Z",
+                            },
+                        ),
+                    },
+                    {
+                        "key": "high",
+                        "doc_count": 5,
+                        **_recent_hits(
+                            {"@timestamp": "2026-08-14T08:00:00Z"},
+                        ),
+                    },
                     {"key": "low", "doc_count": 10},
                 ]
             }

@@ -32,10 +32,31 @@ async def test_alerts_counts(client, alerts_response):
 
 
 @respx.mock
+async def test_alerts_recent_per_severity(client, alerts_response):
+    respx.post(ALERTS_SEARCH).respond(json=alerts_response)
+    data = await alerts_source(client).fetch()
+    critical = data["recent"]["critical"]
+    assert critical[0] == {
+        "rule_name": "Malware Detection",
+        "timestamp": "2026-08-14T10:00:00Z",
+        "host": "host-1",
+        "user": "alice",
+    }
+    # A hit without rule name or entities still renders something sensible.
+    assert critical[1]["rule_name"] == "Ransomware Behavior"
+    assert critical[1]["host"] is None
+    assert data["recent"]["high"][0]["rule_name"] == "Unnamed rule"
+    # Buckets with no top hits (or absent entirely) yield empty lists.
+    assert data["recent"]["low"] == []
+    assert data["recent"]["medium"] == []
+
+
+@respx.mock
 async def test_alerts_missing_aggregations(client):
     respx.post(ALERTS_SEARCH).respond(json={"hits": {"total": {"value": 0}}})
     data = await alerts_source(client).fetch()
     assert data["counts"] == {"critical": 0, "high": 0, "medium": 0, "low": 0}
+    assert data["recent"] == {"critical": [], "high": [], "medium": [], "low": []}
 
 
 @respx.mock
