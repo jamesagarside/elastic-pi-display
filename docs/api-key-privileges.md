@@ -110,6 +110,20 @@ PUT /_security/api_key/<key-id>
 }
 ```
 
+The PUT replaces the whole `role_descriptors` object rather than merging
+into it, so always send the complete block from step 1 with your change
+applied. Sending only the part you are adding silently drops the rest.
+
+After changing a key's privileges, restart the display backend so it
+re-probes the sources and unhides the tiles:
+
+```bash
+sudo systemctl restart elastic-pi-display
+```
+
+(`elastic-display test` probes live and reflects the change immediately;
+the running display only re-probes at startup.)
+
 **Attack Discovery unavailable with a 404.** The stack predates the
 Attack Discovery public API (8.x before 8.14, roughly). Not a key problem;
 the tile hides itself and the rest of the display works.
@@ -117,9 +131,11 @@ the tile hides itself and the rest of the display works.
 **Entity risk scores unavailable.** Usually not a key problem either: the
 `risk-score.risk-score-latest-<space>` index only exists once the risk
 engine has been enabled (**Security > Manage > Entity Risk Score**) and it
-needs a Platinum licence or better. If the engine is on and the licence is
-right but the test still fails, the key is missing `read` on that index
-pattern.
+needs a Platinum licence or better. The index is created by the engine's
+first scoring run, so expect the 404 to persist for a while after
+enabling; restart the backend once it exists. If the engine is on, the
+index exists, and the test still fails, the key is missing `read` on that
+index pattern.
 
 **Security alerts failing.** Check the space: the key above grants access to the
 `-default` index names, and a display configured for another space queries
