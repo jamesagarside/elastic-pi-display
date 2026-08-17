@@ -2,17 +2,19 @@ import { EuiBadge, EuiIcon, EuiText, useEuiTheme } from '@elastic/eui';
 import { css } from '@emotion/react';
 
 import { relativeTime } from '../time';
+import type { DisplayMode } from '../theme/displayMode';
 import type { Snapshot } from '../types';
 import { ViewDots } from './ViewDots';
 
 interface Props {
   snapshot: Snapshot | null;
   connected: boolean;
+  mode: DisplayMode;
   viewCount: number;
   viewIndex: number;
 }
 
-export function StatusBar({ snapshot, connected, viewCount, viewIndex }: Props) {
+export function StatusBar({ snapshot, connected, mode, viewCount, viewIndex }: Props) {
   const { euiTheme } = useEuiTheme();
 
   const lastUpdated = snapshot
@@ -41,10 +43,13 @@ export function StatusBar({ snapshot, connected, viewCount, viewIndex }: Props) 
         background: ${euiTheme.colors.body};
       `}
     >
-      <EuiIcon type="logoSecurity" size="m" />
+      <EuiIcon
+        type={mode === 'observability' ? 'logoObservability' : 'logoSecurity'}
+        size="m"
+      />
       <EuiText size="xs">
         <span css={css`font-weight: ${euiTheme.font.weight.semiBold};`}>
-          Elastic Security
+          {mode === 'observability' ? 'Elastic Observability' : 'Elastic Security'}
         </span>
       </EuiText>
       {snapshot?.meta.space && snapshot.meta.space !== 'default' && (

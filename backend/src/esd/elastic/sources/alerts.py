@@ -20,10 +20,16 @@ SEVERITIES = ("critical", "high", "medium", "low")
 RECENT_PER_SEVERITY = 5
 
 
-def _dig(source: dict[str, Any], *path: str) -> Any:
-    """Walk a nested _source dict; returns None if any level is missing."""
+def _field(source: dict[str, Any], dotted: str) -> Any:
+    """Read a field from an alert _source.
+
+    Alerts-as-data documents store literal dotted keys ("kibana.alert.rule.name"
+    is a top-level key); fall back to walking a nested shape for safety.
+    """
+    if dotted in source:
+        return source[dotted]
     node: Any = source
-    for key in path:
+    for key in dotted.split("."):
         if not isinstance(node, dict):
             return None
         node = node.get(key)
@@ -93,11 +99,11 @@ class AlertsSource(Source):
                 src = hit.get("_source", {})
                 recent[key].append(
                     {
-                        "rule_name": _dig(src, "kibana", "alert", "rule", "name")
+                        "rule_name": _field(src, "kibana.alert.rule.name")
                         or "Unnamed rule",
                         "timestamp": src.get("@timestamp"),
-                        "host": _dig(src, "host", "name"),
-                        "user": _dig(src, "user", "name"),
+                        "host": _field(src, "host.name"),
+                        "user": _field(src, "user.name"),
                     }
                 )
         total = result.get("hits", {}).get("total", {})

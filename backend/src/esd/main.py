@@ -20,7 +20,15 @@ from . import __version__
 from .api import router
 from .config import Config, load_config
 from .elastic.client import ElasticClient
-from .elastic.sources import AlertsSource, AttackDiscoverySource, RiskScoresSource
+from .elastic.sources import (
+    AlertsSource,
+    ApmServicesSource,
+    AttackDiscoverySource,
+    HostsSource,
+    ObservabilityAlertsSource,
+    RiskScoresSource,
+    SloSource,
+)
 from .poller import Poller
 from .sse import EventBus
 from .state import DisplayState
@@ -50,6 +58,10 @@ def build_sources(cfg: Config, client: ElasticClient) -> list:
             index=cfg.risk_index,
             entity_index=cfg.entity_store_index,
         ),
+        ObservabilityAlertsSource(client, cfg.poll.observability_alerts_seconds),
+        SloSource(client, cfg.poll.slos_seconds),
+        HostsSource(client, cfg.poll.hosts_seconds),
+        ApmServicesSource(client, cfg.poll.apm_services_seconds),
     ]
 
 

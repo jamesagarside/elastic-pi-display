@@ -56,6 +56,54 @@ export interface RiskData {
   entities: RiskEntity[];
 }
 
+export interface ObsAlert {
+  rule_name: string;
+  category: string | null;
+  reason: string;
+  started: string | null;
+}
+
+export interface ObsAlertsData {
+  active: number;
+  recent: ObsAlert[];
+}
+
+export interface Slo {
+  name: string | null;
+  status: string | null;
+  sli: number | null;
+  target: number | null;
+  budget_remaining: number | null;
+}
+
+export interface SloData {
+  total: number;
+  slos: Slo[];
+}
+
+export interface HostMetrics {
+  name: string;
+  cpu_pct: number | null;
+  memory_pct: number | null;
+}
+
+export interface HostsData {
+  hosts: HostMetrics[];
+  window: string;
+}
+
+export interface ApmService {
+  name: string;
+  transactions: number;
+  error_rate_pct: number;
+  latency_ms: number | null;
+}
+
+export interface ApmData {
+  services: ApmService[];
+  window: string;
+}
+
 export interface SourceState<T> {
   status: SourceStatus;
   updated_at: number | null;
@@ -68,6 +116,10 @@ export interface Snapshot {
     alerts?: SourceState<AlertsData>;
     attack_discovery?: SourceState<AttackDiscoveryData>;
     risk_scores?: SourceState<RiskData>;
+    observability_alerts?: SourceState<ObsAlertsData>;
+    slos?: SourceState<SloData>;
+    hosts?: SourceState<HostsData>;
+    apm_services?: SourceState<ApmData>;
   };
   meta: {
     space?: string;

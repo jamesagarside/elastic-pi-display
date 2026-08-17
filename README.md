@@ -1,13 +1,24 @@
 # elastic-pi-display
 
-A Raspberry Pi desk display for Elastic Security. It shows the current state
-of your SIEM at a glance:
+A Raspberry Pi desk display for Elastic Security and Observability. It shows
+the current state of your deployment at a glance, in two switchable modes.
+
+Security mode:
 
 - **Open alerts by severity**: critical, high, medium, and low counts, big
   enough to read from across the room
 - **Attack Discovery**: the latest AI-generated attack discoveries
-- **Entity risk scores**: the riskiest hosts and users, where the risk engine
-  is enabled
+- **Entity risk scores**: the riskiest entities, where risk scoring is
+  enabled
+
+Observability mode (appears when your deployment has the data):
+
+- **Observability alerts**: active alerts from log, metric, and threshold
+  rules
+- **SLO health**: status and remaining error budget per SLO
+- **Infrastructure hosts**: CPU and memory per host, from Elastic Agent or
+  OTel host metrics
+- **APM services**: throughput, latency, and error rate per service
 
 The frontend is built with Elastic's own [EUI](https://eui.elastic.co)
 component library, so it looks and feels like an extension of Elastic

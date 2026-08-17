@@ -33,14 +33,16 @@ def alerts_response() -> dict:
                     {
                         "key": "critical",
                         "doc_count": 2,
+                        # Alerts-as-data _source uses literal dotted keys.
                         **_recent_hits(
                             {
-                                "kibana": {"alert": {"rule": {"name": "Malware Detection"}}},
+                                "kibana.alert.rule.name": "Malware Detection",
                                 "@timestamp": "2026-08-14T10:00:00Z",
-                                "host": {"name": "host-1"},
-                                "user": {"name": "alice"},
+                                "host.name": "host-1",
+                                "user.name": "alice",
                             },
                             {
+                                # Nested shape still parses via the fallback.
                                 "kibana": {"alert": {"rule": {"name": "Ransomware Behavior"}}},
                                 "@timestamp": "2026-08-14T09:30:00Z",
                             },
