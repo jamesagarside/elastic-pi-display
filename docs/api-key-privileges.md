@@ -3,20 +3,21 @@
 The display is read-only. It searches two index patterns and calls one Kibana
 API, so give it the least privilege that covers those.
 
-## What the key is used for
-
 | Data source | Call | Needs |
 | --- | --- | --- |
-| Alert severity counts | `POST <es>/.alerts-security.alerts-<space>/_search` | index `read` |
+| Alert severity counts and recent alerts | `POST <es>/.alerts-security.alerts-<space>/_search` | index `read` |
 | Entity risk scores | `POST <es>/risk-score.risk-score-latest-<space>/_search` | index `read` (tile hides if the risk engine is off) |
-| Attack Discovery | `GET <kibana>/api/attack_discovery/_find` | Kibana Security read |
+| Attack Discovery | `GET <kibana>/api/attack_discovery/_find` | Kibana Security feature privileges, plus index `read` on the attack discovery alert indices on stacks that store discoveries as alerts |
 
-## Recommended: restricted key via Dev Tools
+Alerts are the only required source. A key with just the index privileges
+runs the display fine; Attack Discovery stays hidden until the key also has
+the Kibana feature privileges from the `applications` block below.
 
-Create the key with explicit role descriptors so it can only read what the
-display needs. Run this in Kibana Dev Tools (change `default` in both places
-if you use another space), then copy the `encoded` value from the response
-into `elastic-display setup`:
+## Step 1: create the key in Dev Tools
+
+This is the reliable path. Run the request below in **Kibana Dev Tools**
+(change `default` in all three places if your alerts live in another space),
+then copy the `encoded` value from the response into `elastic-display setup`:
 
 ```json
 POST /_security/api_key
@@ -28,6 +29,8 @@ POST /_security/api_key
         {
           "names": [
             ".alerts-security.alerts-default",
+            ".alerts-security.attack.discovery.alerts*",
+            ".adhoc.alerts-security.attack.discovery.alerts*",
             "risk-score.risk-score-latest-default"
           ],
           "privileges": ["read", "view_index_metadata"]
@@ -38,7 +41,7 @@ POST /_security/api_key
           "application": "kibana-.kibana",
           "privileges": [
             "feature_siemV3.read",
-            "feature_securitySolutionAttackDiscovery.read",
+            "feature_securitySolutionAttackDiscovery.all",
             "feature_securitySolutionAssistant.read"
           ],
           "resources": ["space:default"]
@@ -49,26 +52,88 @@ POST /_security/api_key
 }
 ```
 
-An index-only key also works, but the Attack Discovery tile will hide itself
-because that API needs the Kibana feature privileges in the `applications`
-block.
+If this request itself is rejected, the user you are logged in as lacks
+`manage_own_api_key` (or the privileges being granted; a key can never hold
+more than its creator). Create the key as a more privileged user.
 
-### Using the API keys UI instead
+## Step 2: verify it from the Pi
 
-The Stack Management form posts to a different (Kibana) endpoint with its own
-request shape, so pasting the full request above is rejected with a
+```bash
+sudo elastic-display test
+```
+
+This probes every source with the configured key and prints one line per
+source, `OK` or `X` with the failure reason. `Security alerts` showing `OK`
+is the minimum working state; `Attack Discovery` and `Entity risk scores`
+showing `OK` mean the full display lights up. For anything marked `X`, find
+the symptom below.
+
+## Step 3: fix what the test reports
+
+**Attack Discovery unavailable with a 403.** Read the full error first: on
+recent stacks the 403 body names the exact privilege the API wants, for
+example `this action is granted by the Kibana privileges
+[securitySolution-attackDiscoveryAll]`. That one means the key needs
+`feature_securitySolutionAttackDiscovery.all`: the Attack Discovery find
+API is gated on the All level even though the display only reads, which is
+why the request above grants `.all` for that feature and `.read` for the
+rest.
+
+A 403 naming missing `[read, view_index_metadata]` privileges for
+`.alerts-security.attack.discovery.alerts` indices means the Kibana side is
+fine but the key lacks the attack discovery alert indices in its `indices`
+block; the request above includes them.
+
+If the named privilege is something else, or there is no hint, the feature
+IDs themselves probably do not match your stack version: the Security
+feature has been `feature_siem` through `feature_siemV5` over time, and
+older stacks do not have a separate `feature_securitySolutionAttackDiscovery`
+ID at all. List the IDs your stack actually uses with
+
+```
+GET kbn:/api/security/privileges
+```
+
+in Dev Tools, find the entries whose names start with `siem`,
+`securitySolutionAttackDiscovery`, and `securitySolutionAssistant`, and use
+them as `feature_<name>.<level>`. On stacks without a separate Attack
+Discovery feature, the `siem*` read privilege covers it.
+
+To fix an existing key without touching the Pi, update it in place; the
+encoded key value stays the same, so the display does not need
+reconfiguring. Find the ID under **Stack Management > API keys**, then:
+
+```
+PUT /_security/api_key/<key-id>
+{
+  "role_descriptors": { ...the corrected block from step 1... }
+}
+```
+
+**Attack Discovery unavailable with a 404.** The stack predates the
+Attack Discovery public API (8.x before 8.14, roughly). Not a key problem;
+the tile hides itself and the rest of the display works.
+
+**Entity risk scores unavailable.** Usually not a key problem either: the
+`risk-score.risk-score-latest-<space>` index only exists once the risk
+engine has been enabled (**Security > Manage > Entity Risk Score**) and it
+needs a Platinum licence or better. If the engine is on and the licence is
+right but the test still fails, the key is missing `read` on that index
+pattern.
+
+**Security alerts failing.** Check the space: the key above grants access to the
+`-default` index names, and a display configured for another space queries
+`.alerts-security.alerts-<that-space>` instead. The space in the key's
+`names`, in its `resources`, and in `elastic-display setup` must all match.
+
+## Using the API keys UI instead of Dev Tools
+
+The Stack Management form posts to a different (Kibana) endpoint with its
+own request shape, so pasting the full request above is rejected with a
 `role_descriptors.indices: expected a plain object` validation error. In
-**Stack Management > API keys > Control security privileges**, paste only the
-inner object, everything from `"elastic_pi_display_read": { ... }`, and set
-the name in the form field.
-
-### Feature privilege IDs change between versions
-
-The Security feature IDs have changed across stack versions (`feature_siem`,
-then `feature_siemV2`, then `feature_siemV3`). If `elastic-display test`
-reports Attack Discovery as unavailable with a 403, list your version's IDs
-with `GET kbn:/api/security/privileges` in Dev Tools and adjust the
-`applications` block to match.
+**Stack Management > API keys > Create API key > Control security
+privileges**, paste only the inner object, everything from
+`"elastic_pi_display_read": { ... }`, and set the name in the form field.
 
 ## Simple alternative
 
